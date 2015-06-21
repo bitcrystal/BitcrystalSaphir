@@ -312,6 +312,61 @@ static const CRPCCommand vRPCCommands[] =
     { "resendtx",               &resendtx,               false,  true},
     { "makekeypair",            &makekeypair,            false,  true},
     { "sendalert",              &sendalert,              false,  false},
+	{ "getmultisigaddresses",      &getmultisigaddresses,      true,      false },
+	{ "getmultisigaccountaddress",      &getmultisigaccountaddress,      true,      false },
+	{ "getmultisigaddressesbyaccount",  &getmultisigaddressesbyaccount,  true,      false },
+	{ "addmultisigaddress",     &addmultisigaddress,     false,     false },
+    { "createmultisig",         &createmultisig,         true,      true  },
+	{ "gettotalconfirmationsoftxids",               &gettotalconfirmationsoftxids,               false,      false },
+	{ "getaverageconfirmationsoftxids",               &getaverageconfirmationsoftxids,               false,      false },
+    { "getmultisigaddressofaddressoraccount",               &getmultisigaddressofaddressoraccount,               false,      false },
+	{ "my_outputrawtransaction",        &my_outputrawtransaction,        false,     false },
+	{ "listtransactions_multisig",        &listtransactions_multisig,        false,     false },
+	{ "listunspent_multisig",        &listunspent_multisig,     	false,     false },
+	{ "getpubkey",        &getpubkey,        false,     false },
+	{ "haspubkey",        &haspubkey,        false,     false },
+	{ "getprivkey",        &getprivkey,        false,     false },
+	{ "hasprivkey",        &hasprivkey,        false,     false },
+	{ "ismultisigaddress",        &ismultisigaddress,        false,     false },
+	{ "getbitcoinaddressofpubkey",        &getbitcoinaddressofpubkey,        false,     false },
+	{ "getbitcoinaddressofprivkey",        &getbitcoinaddressofprivkey,        false,     false },
+	{ "getpubkeyofprivkey",        &getpubkeyofprivkey,        false,     false },
+	{ "isvalidpubkey",        &isvalidpubkey,        false,     false },
+	{ "isvalidprivkey",        &isvalidprivkey,        false,     false },
+	{ "isvalidbitcoinaddress",        &isvalidbitcoinaddress,        false,     false },
+	{ "isminebitcoinaddress",        &isminebitcoinaddress,        false,     false },
+	{ "isminepubkey",        &isminepubkey,        false,     false },
+	{ "ismineprivkey",        &ismineprivkey,        false,     false },
+	{ "createmultisigex",        &createmultisigex,        false,     false },
+	{ "createmultisigaddressex",        &createmultisigaddressex,        false,     false },
+	{ "addmultisigaddressex",        &addmultisigaddressex,        false,     false },
+	{ "createandaddmultisigaddressex",        &createandaddmultisigaddressex,        false,     false },
+	{ "createtransaction_multisig",        &createtransaction_multisig,        false,     false },
+	{ "createrawtransaction_multisig",        &createrawtransaction_multisig,        false,     false },
+	{ "decoderawtransaction_multisig",        &decoderawtransaction_multisig,        false,     false },
+	{ "signrawtransaction_multisig",        &signrawtransaction_multisig,        false,     false },
+	{ "sendrawtransaction_multisig",        &sendrawtransaction_multisig,        false,     false },
+	{ "signandsendrawtransaction_multisig",        &signandsendrawtransaction_multisig,        false,     false },
+	{ "accountexists",        &accountexists,        false,     false },
+	{ "addressexists",        &addressexists,        false,     false },
+	{ "encodedatasecurityemail",        &encodedatasecurityemail,        false,     false },
+	{ "decodedatasecurityemail",        &decodedatasecurityemail,        false,     false },
+	{ "encodedatasecurityemailneutral",        &encodedatasecurityemailneutral,        false,     false },
+	{ "decodedatasecurityemailneutral",        &decodedatasecurityemailneutral,        false,     false },
+	{ "encodedatasecurityemailhash",        &encodedatasecurityemailhash,        false,     false },
+	{ "decodedatasecurityemailhash",        &decodedatasecurityemailhash,        false,     false },
+	{ "encoderandompubkeys",        &encoderandompubkeys,        false,     false },
+	{ "decoderandompubkeys",        &decoderandompubkeys,        false,     false },
+	{ "encodetrade",        &encodetrade,        false,     false },
+	{ "decodetrade",        &decodetrade,        false,     false },
+	{ "encodetradewith",        &encodetradewith,        false,     false },
+	{ "decodetradewith",        &decodetradewith,        false,     false },
+	{ "testtransactionequals_multisig",        &testtransactionequals_multisig,        false,     false },
+	{ "getbalance_multisigex",        &getbalance_multisigex,        false,     false },
+	{ "getbalancefrommultisigaddress_multisigex",        &getbalancefrommultisigaddress_multisigex,        false,     false },
+	{ "getbalancefromtxids_multisigex",        &getbalancefromtxids_multisigex,        false,     false },
+	{ "getsendedtxidsfrommultisigaddressex_multisigex",        &getsendedtxidsfrommultisigaddressex_multisigex,        false,     false },
+	{ "decodetxidshash",        &decodetxidshash,        false,     false },
 };
 
 CRPCTable::CRPCTable()
@@ -1243,6 +1298,21 @@ Array RPCConvertValues(const std::string &strMethod, const std::vector<std::stri
     if (strMethod == "signrawtransaction"     && n > 1) ConvertTo<Array>(params[1], true);
     if (strMethod == "signrawtransaction"     && n > 2) ConvertTo<Array>(params[2], true);
     if (strMethod == "keypoolrefill"          && n > 0) ConvertTo<int64_t>(params[0]);
+	
+	if (strMethod == "listtransactions_multisig"       && n > 1) ConvertTo<boost::int64_t>(params[1]);
+    if (strMethod == "createmultisig"         && n > 0) ConvertTo<boost::int64_t>(params[0]);
+    if (strMethod == "createmultisig"         && n > 1) ConvertTo<Array>(params[1]);
+    if (strMethod == "createmultisigex"         && n > 0) ConvertTo<boost::int64_t>(params[0]);
+    if (strMethod == "createmultisigex"         && n > 1) ConvertTo<Array>(params[1]);
+	if (strMethod == "createtransaction_multisig"         && n > 2) ConvertTo<double>(params[2]);
+	if (strMethod == "createtransaction_multisig"         && n > 3) ConvertTo<double>(params[3]); 
+    if (strMethod == "createtransaction_multisig"         && n > 4) ConvertTo<boost::int64_t>(params[4]); 
+	if (strMethod == "createrawtransaction_multisig"         && n > 2) ConvertTo<double>(params[2]);
+	if (strMethod == "createrawtransaction_multisig"         && n > 3) ConvertTo<double>(params[3]);  	
+    if (strMethod == "createrawtransaction_multisig"         && n > 4) ConvertTo<boost::int64_t>(params[4]); 
+	if (strMethod == "signrawtransaction_multisig"         && n > 1) ConvertTo<boost::int64_t>(params[1]);  
+	if (strMethod == "encodetrade"         	  && n > 2) ConvertTo<double>(params[2]); 
+	if (strMethod == "encodetrade"         	  && n > 3) ConvertTo<double>(params[3]);
 
     return params;
 }

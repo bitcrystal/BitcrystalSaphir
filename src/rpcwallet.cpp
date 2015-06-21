@@ -1777,3 +1777,706 @@ Value makekeypair(const Array& params, bool fHelp)
     result.push_back(Pair("PublicKey", HexStr(key.GetPubKey().Raw())));
     return result;
 }
+
+//
+// Used by addmultisigaddress / createmultisig:
+//
+static CScript _createmultisig(const Array& params)
+{
+    int nRequired = params[0].get_int();
+    const Array& keys = params[1].get_array();
+
+    // Gather public keys
+    if (nRequired < 1)
+        throw runtime_error("a multisignature address must require at least one key to redeem");
+    if ((int)keys.size() < nRequired)
+        throw runtime_error(
+            strprintf("not enough keys supplied "
+                      "(got %"PRIszu" keys, but need at least %d to redeem)", keys.size(), nRequired));
+    std::vector<CKey> pubkeys;
+    pubkeys.resize(keys.size());
+    for (unsigned int i = 0; i < keys.size(); i++)
+    {
+        const std::string& ks = keys[i].get_str();
+
+        // Case 1: BitCrystal address and we have full public key:
+        CBitcoinAddress address(ks);
+        if (address.IsValid())
+        {
+            CKeyID keyID;
+            if (!address.GetKeyID(keyID))
+                throw runtime_error(
+                    strprintf("%s does not refer to a key",ks.c_str()));
+            CPubKey vchPubKey;
+            if (!pwalletMain->GetPubKey(keyID, vchPubKey))
+                throw runtime_error(
+                    strprintf("no full public key for address %s",ks.c_str()));
+            if (!vchPubKey.IsValid() || !pubkeys[i].SetPubKey(vchPubKey))
+                throw runtime_error(" Invalid public key: "+ks);
+        }
+
+        // Case 2: hex public key
+        else if (IsHex(ks))
+        {
+            CPubKey vchPubKey(ParseHex(ks));
+            if (!vchPubKey.IsValid() || !pubkeys[i].SetPubKey(vchPubKey))
+                throw runtime_error(" Invalid public key: "+ks);
+        }
+        else
+        {
+            throw runtime_error(" Invalid public key: "+ks);
+        }
+    }
+    CScript result;
+    result.SetMultisig(nRequired, pubkeys);
+    return result;
+}
+
+Value createmultisig(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() < 2 || params.size() > 2)
+    {
+        string msg = "createmultisig <nrequired> <'[\"key\",\"key\"]'>\n"
+            "Creates a multi-signature address and returns a json object\n"
+            "with keys:\n"
+            "address : bitcrystal address\n"
+            "redeemScript : hex-encoded redemption script";
+        throw runtime_error(msg);
+    }
+
+    // Construct using pay-to-script-hash:
+    CScript inner = _createmultisig(params);
+    CScriptID innerID = inner.GetID();
+    CBitcoinAddress address(innerID);
+
+    Object result;
+    result.push_back(Pair("address", address.ToString()));
+    result.push_back(Pair("redeemScript", HexStr(inner.begin(), inner.end())));
+
+    return result;
+}
+
+
+bool hasRedeemScript(string address)
+{
+	bool allok=false;
+	try
+	{
+		CBitcoinAddress addr(address);
+		return addr.IsScript();
+	} catch (runtime_error ex) {
+		allok=false;
+		return allok;
+	} catch (Object ex) {
+		allok=false;
+		return allok;
+	} catch (std::exception ex) {
+		allok=false;
+		return allok;
+	}
+}
+
+bool accountExists(std::string & account)
+{
+    BOOST_FOREACH(const PAIRTYPE(CBitcoinAddress, string)& item, pwalletMain->mapAddressBook)
+    {
+        const CBitcoinAddress& address = item.first;
+        const string& strName = item.second;
+		if(account.compare(strName) == 0)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+Value accountexists(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() != 1)
+        throw runtime_error(
+            "accountexists <account>\n"
+            "Returns true if accounts exist otherwise false");
+
+    // Parse the account first so we don't generate a key if there's an error
+    string strAccount = AccountFromValue(params[0]);
+
+    return accountExists(strAccount);
+}
+
+bool addressExists(std::string & addr)
+{
+	string str = "";
+    BOOST_FOREACH(const PAIRTYPE(CBitcoinAddress, string)& item, pwalletMain->mapAddressBook)
+    {
+        const CBitcoinAddress& address = item.first;
+        const string& strName = item.second;
+		str = address.ToString();
+		if(str.compare(addr) == 0)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+Value addressexists(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() != 1)
+        throw runtime_error(
+            "addressexists <address>\n"
+            "Returns true if address exist otherwise false");
+
+    // Parse the account first so we don't generate a key if there's an error
+    string strAddress = params[0].get_str();
+
+    return addressExists(strAddress);
+}
+
+bool GetMultisigAddresses(vector<my_multisigaddress> & my_multisigaddresses)
+{
+	bool allok=false;
+	bool ismultisigaddress=false;
+	my_multisigaddress my;
+    BOOST_FOREACH(const PAIRTYPE(CBitcoinAddress, string)& item, pwalletMain->mapAddressBook)
+    {
+        const CBitcoinAddress& address = item.first;
+        const string& strName = item.second;
+		ismultisigaddress=address.IsScript();
+        if (ismultisigaddress)
+		{
+			my.clear();
+			my.account=strName;
+            my.address=address.ToString();
+			CScript cScript;
+			const CScriptID& hash = boost::get<const CScriptID&>(address.Get());
+			pwalletMain->GetCScript(hash, cScript);
+			my.redeemScript=HexStr(cScript.begin(), cScript.end());
+			std::vector<CTxDestination> addresses;
+			txnouttype whichType;
+			int nRequired;
+			if(!ExtractDestinations(cScript, whichType, addresses, nRequired))
+			{
+				continue;
+			}
+			if (whichType != TX_MULTISIG)
+				continue;
+			BOOST_FOREACH(const CTxDestination& addr, addresses)
+			{
+				string x=CBitcoinAddress(addr).ToString();
+				my.addressesJSON.push_back(x);
+				my.addresses.push_back(x);
+			}
+			my.nRequired=nRequired;
+			my.empty=false;
+			my_multisigaddresses.push_back(my);
+    	}
+	}
+	allok=my_multisigaddresses.size()!=0;
+	return allok;
+}
+
+Value getmultisigaddresses(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() > 0)
+        throw runtime_error(
+            "getmultisigaddresses\n"
+            "Returns the list of multisig addresses.");
+
+	vector<my_multisigaddress> setAddress;
+    Array arr;
+	bool allok = GetMultisigAddresses(setAddress);
+	string str;
+	if(!allok)
+	{
+		return arr;
+	}
+	int size = setAddress.size();
+	for(int i = 0; i < size; i++)
+	{
+		Object entry;
+		entry.push_back(Pair("account", setAddress.at(i).account));
+		entry.push_back(Pair("address", setAddress.at(i).address));
+		entry.push_back(Pair("redeemScript", setAddress.at(i).redeemScript));
+		entry.push_back(Pair("addresses", setAddress.at(i).addressesJSON));
+		entry.push_back(Pair("nRequired", setAddress.at(i).nRequired));
+		arr.push_back(entry);
+	}
+	return arr;
+}
+
+bool GetMultisigAccountAddresses(string & strAccount, vector<my_multisigaddress>& setAddress)
+{
+	vector<my_multisigaddress> setAddresses;
+	Array arr2;
+	bool allok=GetMultisigAddresses(setAddresses);
+	if(!allok)
+		return allok;
+    int size = setAddresses.size();
+	for(int i = 0; i < size; i++)
+	{
+		if(setAddresses.at(i).account.compare(strAccount)==0)
+			setAddress.push_back(setAddresses.at(i));
+	}
+	allok=setAddress.size()!=0;
+	return allok;
+}
+
+bool GetMultisigDataFromAddress(std::string & address, my_multisigaddress & my)
+{
+	vector<my_multisigaddress> setAddresses;
+	Array arr2;
+	bool allok=GetMultisigAddresses(setAddresses);
+	if(!allok)
+		return allok;
+    int size = setAddresses.size();
+	for(int i = 0; i < size; i++)
+	{
+		if(setAddresses.at(i).address.compare(address)==0)
+		{
+			my.clear();
+			my.account=setAddresses.at(i).account;
+			my.address=setAddresses.at(i).address;
+			my.addresses=setAddresses.at(i).addresses;
+			my.redeemScript=setAddresses.at(i).redeemScript;
+			my.addressesJSON=setAddresses.at(i).addressesJSON;
+			my.nRequired=setAddresses.at(i).nRequired;
+			my.empty=false;
+			return true;
+		}
+	}
+	allok=setAddresses.size()!=0;
+	return allok;
+}
+
+bool GetMultisigAccountAddress(string & strAccount, my_multisigaddress & my)
+{
+	vector<my_multisigaddress>setAddress;
+    bool allok=GetMultisigAccountAddresses(strAccount, setAddress);
+	if(!allok)
+	{
+		return allok;
+	}
+	my.clear();
+	my.account=setAddress.at(0).account;
+	my.address=setAddress.at(0).address;
+	my.redeemScript=setAddress.at(0).redeemScript;
+	my.addresses=setAddress.at(0).addresses;
+	my.addressesJSON=setAddress.at(0).addressesJSON;
+	my.nRequired=setAddress.at(0).nRequired;
+	my.empty=false;
+	return true;
+}
+
+Value getmultisigaccountaddress(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() != 1)
+        throw runtime_error(
+            "getmultisigaccountaddress <account>\n"
+            "Returns the current BitCrystal address for receiving payments to this account.");
+
+    // Parse the account first so we don't generate a key if there's an error
+    string strAccount = AccountFromValue(params[0]);
+	string noaddressesfound = "No addresses found!";
+	my_multisigaddress my;
+	bool allok = GetMultisigAccountAddress(strAccount,my);
+	if(!allok)
+	{
+		return noaddressesfound;
+    }
+	Object entry;
+	entry.push_back(Pair("account", my.account));
+	entry.push_back(Pair("address", my.address));
+	entry.push_back(Pair("redeemScript", my.redeemScript));
+	entry.push_back(Pair("addresses", my.addressesJSON));
+	entry.push_back(Pair("nRequired", my.nRequired));
+	return entry;
+}
+
+Value getmultisigaddressesbyaccount(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() != 1)
+        throw runtime_error(
+            "getmultisigaddressesbyaccount <account>\n"
+            "Returns the list of addresses for the given account.");
+
+    string strAccount = AccountFromValue(params[0]);
+
+	vector<my_multisigaddress> setAddress;
+    Array arr;
+	bool allok = GetMultisigAccountAddresses(strAccount, setAddress);
+	if(!allok)
+	{
+		return arr;
+	}
+	int size = setAddress.size();
+	for(int i = 0; i < size; i++)
+	{
+		Object entry;
+		entry.push_back(Pair("account", setAddress.at(i).account));
+		entry.push_back(Pair("address", setAddress.at(i).address));
+		entry.push_back(Pair("redeemScript", setAddress.at(i).redeemScript));
+		entry.push_back(Pair("addresses", setAddress.at(i).addressesJSON));
+		entry.push_back(Pair("nRequired", setAddress.at(i).nRequired));
+		arr.push_back(entry);
+	}
+	return arr;
+}
+
+Value createmultisigaddressex(const Array& params, bool fHelp)
+{
+	int size = params.size();
+    if (fHelp || size < 1)
+    {
+        string msg = "createmultisigaddressex <any values> <set>\n";
+        msg+=   	 "Creates a multi-signature address and returns a base64 encoded string\n";
+		msg+=        "You can supply any parameters.\n"; 
+		msg+=        "For example, if you passes only one address, the process still works\n"; 
+		msg+=        "and the output base64encoded string for the command addmultisigaddressex is created.\n"; 
+		msg+=        "Where nRequired is then automatically set to 1. \n";
+		msg+=        "For example \n";
+		msg+=        "createmultisigaddressex 1Dhjadiuwbadaadwerd 1D3jshdwjqddduw  1Dsiohfiugahbad\n";
+		msg+=        "nRequired is then automatically set to 3.\n";
+		msg+=        "But as usual you can also use the same parameters as in the command createmultisig or in the command createmultisigex. \n";
+		msg+=        "For example\n";
+		msg+=        "createmultisigex <nrequired> <'[\"key\",\"key\"]'> <set>\n";
+		msg+=        "or\n";
+		msg+=        "createmultisig <nrequired> <'[\"key\",\"key\"]'>\n";
+		msg+=        "But you can also just passed an array. Where nRequired is then automatically set to the size of the array. \n";
+		msg+=        "For example\n";
+		msg+=        "createmultisig <nrequired> <'[\"key\",\"key\"]'>\n";
+		msg+=        "nRequired is then automatically set to 2.\n";
+		msg+=        "You can pass as the first parameter an integer and then for example you can passes multiple addresses separated by spaces.\n";
+		msg+=        "Where nRequired will automatically be set to the first integer parameter.\n";
+		msg+=        "For example\n";
+		msg+=        "createmultisigaddressex 2 1Djhjkhjhjhkhjj 1Ddddjkhjhjhjjhjhj 1Djhjhjhjhjhjhj\n";
+		msg+=        "nRequired is automatically set to 2.\n";
+		msg+=		 "You can add the multisigaddress to the wallet with addmultisigaddressex <base64encodedstring>\n";
+		msg+=		 "If set is true or any value then you have the permission that all pubkeys or addresses can owned from your wallet!\n";
+		msg+=		 "If set is not set then you need at least 1 public key or address of another wallet!\n";
+        throw runtime_error(msg);
+    }
+	int nRequired=0;
+	Array newParams;
+	Array arr;
+	const int end=size-1;
+	string str;
+	bool array_is_set=false;
+	Value myval;
+	string e="";
+	bool set=false;
+	for(int i = 0; i < size; i++)
+	{
+		if(params[i].type()==str_type)
+		{
+			e = params[i].get_str();
+			if(!read_string(e,myval))
+			{
+				myval = e;
+			} else {
+				if(myval.type()!=array_type&&myval.type()!=bool_type)
+				{
+					int length=e.length();
+					int c=0;
+					for(int j = 0; j < length; j++)
+					{
+						c=(int)e.at(j);
+						if(c<48||c>57)
+						{
+							myval = e;
+							break;
+						}
+					}
+				}
+			}
+		} else {
+			myval = params[i];
+		}
+		if(myval.type()==bool_type)
+		{
+			set=myval.get_bool();
+			if(set)
+			{
+				myval = "true";
+			} else {
+				myval = "false";
+			}
+		}
+		if(i==0&&i!=end)
+		{	
+			if(myval.type()==str_type)
+			{
+				str=myval.get_str();
+				arr.push_back(str);
+				continue;
+			} else if(myval.type()==int_type) 
+			{
+				nRequired=myval.get_int();
+				continue;
+			} else if (myval.type()==array_type)
+			{
+				Array d = myval.get_array();
+				int mysize=d.size();
+				if(nRequired==0)
+				{
+					nRequired=mysize;
+				}
+				newParams.push_back(nRequired);
+				newParams.push_back(d);
+				array_is_set=true;
+			}
+		} else if (i==end) {	
+			if(myval.type()==str_type)
+			{
+				str=myval.get_str();
+				if(str.compare("true")!=0)
+				{
+					arr.push_back(str);
+					if(nRequired==0)
+					{
+						nRequired=arr.size();
+					}
+					if(!array_is_set)
+					{
+						newParams.push_back(nRequired);
+						newParams.push_back(arr);
+					}
+				} else {
+					if(nRequired==0)
+					{
+						nRequired=arr.size();
+					}
+					if(!array_is_set)
+					{
+						newParams.push_back(nRequired);
+						newParams.push_back(arr);
+						newParams.push_back("true");
+					} else {
+						newParams.push_back("true");
+					}
+				}
+			} else if (myval.type()==array_type)
+			{
+				if(array_is_set)
+					continue;
+				Array d = myval.get_array();
+				int mysize=d.size();
+				if(nRequired==0)
+				{
+					nRequired=mysize;
+				}
+				newParams.push_back(nRequired);
+				newParams.push_back(d);
+				array_is_set=true;
+			} 
+		} else {
+			if(myval.type()==str_type)
+			{
+				str=myval.get_str();
+				if(str.compare("true")==0)
+					continue;
+				arr.push_back(str);
+			}
+		}
+	}
+	/*if(newParams.size()==0)
+	{
+		str="true";
+		newParams.push_back(1);
+		newParams.push_back(arr);
+		newParams.push_back(str);
+	} else if (newParams.size()==1)
+	{
+		str="true";
+		newParams.push_back(arr);
+		newParams.push_back(str);
+	}*/
+	try
+	{
+		return createmultisigex(newParams, false);
+	} catch (...) {
+		return "invalid arguments!";
+	}
+}
+
+Value createmultisigex(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() < 2 || params.size() > 3)
+    {
+        string msg = "createmultisigex <nrequired> <'[\"key\",\"key\"]'> <set>\n";
+        msg+=   "Creates a multi-signature address and returns a base64 encoded string\n";
+		msg+=	"You can add the multisigaddress to the wallet with addmultisigaddressex <base64encodedstring>\n";
+		msg+=	"If set is true or any value then you have the permission that all pubkeys or addresses can owned from your wallet!\n";
+		msg+=	"If set is not set then you need at least 1 public key or address of another wallet!\n";
+        throw runtime_error(msg);
+    }
+	string str = "invalid arguments!";
+	if(params[0].type()!=int_type||params[1].type()!=array_type)
+	{
+		return str;
+	}
+	bool set=false;
+	set=params.size()==3;
+		
+	int nRequired = params[0].get_int();
+	Array arr = params[1].get_array();
+	int size = arr.size();
+	int mine_count=0;
+	for(int i = 0; i < size; i++)
+	{
+		string x = arr[i].get_str();
+		if(!IsValidPubKey(x))
+		{
+			if(IsMineBitcoinAddress(x))
+			{
+				mine_count++;
+			}
+		} else {
+			if(IsMinePubKey(x))
+			{
+				mine_count++;
+			}
+		}
+	}
+	if(nRequired>1 && !set)
+	{
+		if(mine_count>nRequired-1)
+		{
+			return str;
+		}
+	}
+    // Construct using pay-to-script-hash:
+    //CScript inner = _createmultisig(params);
+	//unsigned char inner_s[sizeof(inner)];
+	//memcpy((void*)&inner_s[0],(void*)&inner,sizeof(inner));
+    //str = EncodeBase64(inner_s, sizeof(inner));
+	//unsigned char inner_s[sizeof(params)];
+	//memcpy((void*)&inner_s[0],(void*)&params,sizeof(params));
+	//str = base64_encode((unsigned char const*)&inner_s[0], sizeof(params));
+	Value val = params;
+	str=write_string(val,false);
+	str=encode_security(str.c_str(),str.length());
+	str=base64_encode((unsigned char const*)str.c_str(), str.length());
+    return str;
+}
+
+Value addmultisigaddressex(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() < 1 || params.size() > 2)
+    {
+        string msg = "addmultisigaddressex <base64encodedstring> [<strAccount>]\n";
+				msg+= "The first value can you get from the createmultisigex command!\n";
+				msg+= "The second argument is an optional parameter and is the new account name for the multisig address!";
+        throw runtime_error(msg);
+    }
+	string x = params[0].get_str();
+	string strAccount = "";
+	if(params.size()==2)
+		strAccount=params[1].get_str();
+	//bool fDefault=false;
+   // vector<unsigned char> ret = DecodeBase64(x.c_str(), &fDefault);
+	//int size = ret.size();
+	//unsigned char inner_s[size];
+	//for(int i = 0; i < size; i++)
+	//{
+	//	inner_s[i] = ret.at(i);
+	//}
+	//CScript * inner = (CScript*)&inner_s[0];
+	//CScriptID innerID = inner->GetID();
+	//pwalletMain->AddCScript(*inner);
+	//pwalletMain->SetAddressBookName(innerID, strAccount);
+	string decode = base64_decode(x);
+	decode = decode_security(decode);
+	Value val;
+	if(!read_string(decode,val))
+		return false;
+	if(val.type()!=array_type)
+	{
+		return false;
+	}
+	Array array=val.get_array();
+	//int length = decode.length();
+	//unsigned char inner_s[length];
+	//char * ret = (char*)decode.c_str();
+	//memcpy((void*)&inner_s[0],(void*)&ret[0],length);
+	//Array * pars = (Array*)&inner_s[0];
+	//CScript inner = _createmultisig(params);
+	//CScript * inner = (CScript*)&ret[0];
+	//CScriptID innerID = inner->GetID();
+	//pwalletMain->AddCScript(*inner);
+	//pwalletMain->SetAddressBookName(innerID, strAccount);
+	CScript inner = _createmultisig(array);
+	CScriptID innerID = inner.GetID();
+	pwalletMain->AddCScript(inner);
+	pwalletMain->SetAddressBookName(innerID, strAccount);
+	return CBitcoinAddress(innerID).ToString();
+}
+
+Value createandaddmultisigaddressex(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() < 2)
+    {
+        string msg = "createandaddmultisigaddressex <any values> <strAccount> [<set>]\n";
+				msg+= "For questions to the <any values> parameter please type createmultisigaddressex without parameters\n";
+				msg+= "in the console!\n";
+				msg+= "<strAccount> account name there is added to the wallet.\n"; 
+				msg+= "[<set>] is a optional parameter, please type createmultisigaddressex without parameters in the console for questions to the parameter.\n";
+        throw runtime_error(msg);
+    }
+	int size=params.size();
+	Array nArray;
+	int nSize=size-1;
+	bool set=false;
+	string t="";
+	string current="";
+	if(params[nSize].type()==bool_type)
+	{
+		set=params[nSize].get_bool();
+		if(set)
+		{
+			current = "true";
+		} else {
+			current = "false";
+		}
+	} else {
+		current=params[nSize].get_str();
+	}
+	if(current.compare("true")==0)
+	{
+		nSize--;
+		for(int i = 0; i < nSize; i++)
+		{
+			t=params[i].get_str();
+			nArray.push_back(t);
+		}
+		nArray.push_back(current);
+		current=params[nSize].get_str();
+	} else {
+		for(int i = 0; i < nSize; i++)
+		{
+			t=params[i].get_str();
+			nArray.push_back(t);
+		}
+	}
+	try
+	{
+		const Value & nval = createmultisigaddressex(nArray, false);
+		if (nval.type()==str_type)
+		{
+			t = nval.get_str();
+			if(t.compare("invalid arguments!")==0)
+			{
+				return t;
+			}
+			nArray.clear();
+			nArray.push_back(t);
+			nArray.push_back(current);
+			return addmultisigaddressex(nArray,false);
+		} else {
+			t = "invalid arguments!";
+			return t;
+		}
+	} catch (...) {
+		t = "invalid arguments!";
+		return t;
+	}
+}
