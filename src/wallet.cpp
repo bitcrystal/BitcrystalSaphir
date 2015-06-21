@@ -1146,7 +1146,7 @@ static void ApproximateBestSubset(vector<pair<int64_t, pair<const CWalletTx*,uns
     }
 }
 
-// ParkBytes: total coins staked (non-spendable until maturity)
+// BitCrystalSaphirs: total coins staked (non-spendable until maturity)
 int64_t CWallet::GetStake() const
 {
     int64_t nTotal = 0;
@@ -2235,8 +2235,8 @@ set< set<CTxDestination> > CWallet::GetAddressGroupings()
     return ret;
 }
 
-// ParkBytes: check 'spent' consistency between wallet and txindex
-// ParkBytes: fix wallet spent state according to txindex
+// BitCrystalSaphirs: check 'spent' consistency between wallet and txindex
+// BitCrystalSaphirs: fix wallet spent state according to txindex
 void CWallet::FixSpentCoins(int& nMismatchFound, int64_t& nBalanceInQuestion, bool fCheckOnly)
 {
     nMismatchFound = 0;
@@ -2285,7 +2285,7 @@ void CWallet::FixSpentCoins(int& nMismatchFound, int64_t& nBalanceInQuestion, bo
     }
 }
 
-// ParkBytes: disable transaction (only for coinstake)
+// BitCrystalSaphirs: disable transaction (only for coinstake)
 void CWallet::DisableTransaction(const CTransaction &tx)
 {
     if (!tx.IsCoinStake() || !IsFromMe(tx))

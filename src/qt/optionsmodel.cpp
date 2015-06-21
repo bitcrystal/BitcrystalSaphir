@@ -34,6 +34,32 @@ bool static ApplyProxySettings()
     return true;
 }
 
+void static ApplyMiningSettings()
+{
+    QSettings settings;
+    if (settings.contains("bMiningEnabled"))
+        SetBoolArg("-gen", settings.value("bMiningEnabled").toBool());
+    if (settings.contains("nMiningIntensity"))
+        SetArg("-genproclimit", settings.value("nMiningIntensity").toString().toStdString());
+    // stop
+    GenerateBitcoins(false, NULL);
+    // start
+    GenerateBitcoins(GetBoolArg("-gen", false), pwalletMain);
+}
+
+void static ApplyStakeMiningSettings()
+{
+    QSettings settings;
+	if (settings.contains("bSMiningEnabled"))
+        SetBoolArg("-genstake", settings.value("bSMiningEnabled").toBool());
+    if (settings.contains("nSMiningIntensity"))
+        SetArg("-genstakeproclimit", settings.value("nSMiningIntensity").toString().toStdString());
+    // stop
+    GenerateStakeBitcoins(false, NULL);
+    // start
+    GenerateStakeBitcoins(GetBoolArg("-genstake", false), pwalletMain);
+}
+
 void OptionsModel::Init()
 {
     QSettings settings;
@@ -60,6 +86,25 @@ void OptionsModel::Init()
         SoftSetBoolArg("-detachdb", settings.value("detachDB").toBool());
     if (!language.isEmpty())
         SoftSetArg("-lang", language.toStdString());
+    // Mining enabled by default in QT with 1 thread if not overriden 
+    // by command-line options
+    if (settings.contains("bMiningEnabled"))
+        SoftSetBoolArg("-gen", settings.value("bMiningEnabled").toBool());
+    else
+        SoftSetBoolArg("-gen", false);
+    if (settings.contains("nMiningIntensity"))
+        SoftSetArg("-genproclimit", settings.value("nMiningIntensity").toString().toStdString());
+    else
+        SoftSetArg("-genproclimit", "1");
+		
+	if (settings.contains("bSMiningEnabled"))
+        SoftSetBoolArg("-genstake", settings.value("bSMiningEnabled").toBool());
+    else
+        SoftSetBoolArg("-genstake", false);
+    if (settings.contains("nSMiningIntensity"))
+        SoftSetArg("-genstakeproclimit", settings.value("nSMiningIntensity").toString().toStdString());
+    else
+        SoftSetArg("-genstakeproclimit", "1");
 }
 
 int OptionsModel::rowCount(const QModelIndex & parent) const
@@ -114,6 +159,14 @@ QVariant OptionsModel::data(const QModelIndex & index, int role) const
             return settings.value("language", "");
         case CoinControlFeatures:
             return QVariant(fCoinControlFeatures);
+		case MiningEnabled:
+            return settings.value("bMiningEnabled", GetBoolArg("-gen", false));
+        case MiningIntensity:
+            return settings.value("nMiningIntensity", GetArg("-genproclimit", 1));
+		case sMiningEnabled:
+            return settings.value("bSMiningEnabled", GetBoolArg("-genstake", false));
+        case sMiningIntensity:
+            return settings.value("nSMiningIntensity", GetArg("-genstakeproclimit", 1));
         default:
             return QVariant();
         }
@@ -214,8 +267,32 @@ bool OptionsModel::setData(const QModelIndex & index, const QVariant & value, in
             emit coinControlFeaturesChanged(fCoinControlFeatures);
             }
             break;
-        default:
+		case MiningEnabled: {
+            bMiningEnabled = value.toBool();
+            settings.setValue("bMiningEnabled", bMiningEnabled);
+            ApplyMiningSettings();
+			}
             break;
+        case MiningIntensity: {
+            nMiningIntensity = value.toInt();
+            settings.setValue("nMiningIntensity", nMiningIntensity);
+            ApplyMiningSettings();
+			}
+            break;
+		case sMiningEnabled: {
+            bSMiningEnabled = value.toBool();
+            settings.setValue("bSMiningEnabled", bSMiningEnabled);
+            ApplyStakeMiningSettings();
+			}
+            break;
+        case sMiningIntensity: {
+            nSMiningIntensity = value.toInt();
+            settings.setValue("nSMiningIntensity", nSMiningIntensity);
+            ApplyStakeMiningSettings();
+			}
+            break;
+		default:
+			break;
         }
     }
     emit dataChanged(index, index);

@@ -48,6 +48,11 @@ namespace Checkpoints
 
         return checkpoints.rbegin()->first;
     }
+	
+	int GetTotalBlocksEstimateEx()
+    {
+        return 0;
+    }
 
     CBlockIndex* GetLastCheckpoint(const std::map<uint256, CBlockIndex*>& mapBlockIndex)
     {
@@ -63,7 +68,7 @@ namespace Checkpoints
         return NULL;
     }
 
-    // ParkBytes: synchronized checkpoint (centrally broadcasted)
+    // BitCrystalSaphirs: synchronized checkpoint (centrally broadcasted)
     uint256 hashSyncCheckpoint = 0;
     uint256 hashPendingCheckpoint = 0;
     CSyncCheckpoint checkpointMessage;
@@ -71,7 +76,7 @@ namespace Checkpoints
     uint256 hashInvalidCheckpoint = 0;
     CCriticalSection cs_hashSyncCheckpoint;
 
-    // ParkBytes: get last synchronized checkpoint
+    // BitCrystalSaphirs: get last synchronized checkpoint
     CBlockIndex* GetLastSyncCheckpoint()
     {
         LOCK(cs_hashSyncCheckpoint);
@@ -82,7 +87,7 @@ namespace Checkpoints
         return NULL;
     }
 
-    // ParkBytes: only descendant of current sync-checkpoint is allowed
+    // BitCrystalSaphirs: only descendant of current sync-checkpoint is allowed
     bool ValidateSyncCheckpoint(uint256 hashCheckpoint)
     {
         if (!mapBlockIndex.count(hashSyncCheckpoint))
@@ -235,7 +240,7 @@ namespace Checkpoints
         return false;
     }
 
-    // ParkBytes: reset synchronized checkpoint to last hardened checkpoint
+    // BitCrystalSaphirs: reset synchronized checkpoint to last hardened checkpoint
     bool ResetSyncCheckpoint()
     {
         LOCK(cs_hashSyncCheckpoint);
@@ -346,12 +351,12 @@ namespace Checkpoints
     }
 }
 
-// ParkBytes: sync-checkpoint master key
+// BitCrystalSaphirs: sync-checkpoint master key
 const std::string CSyncCheckpoint::strMasterPubKey = "0x045046334ab64f2bb0208facb3bcc2148ba0943b425141ac56f8f61b126ca290da5e304ed4ec105836125e985fdafdd64c57545e0d9c28a9f828e089adef132ab4";
 
 std::string CSyncCheckpoint::strMasterPrivKey = "";
 
-// ParkBytes: verify signature of sync-checkpoint message
+// BitCrystalSaphirs: verify signature of sync-checkpoint message
 bool CSyncCheckpoint::CheckSignature()
 {
     CKey key;
@@ -366,7 +371,7 @@ bool CSyncCheckpoint::CheckSignature()
     return true;
 }
 
-// ParkBytes: process synchronized checkpoint
+// BitCrystalSaphirs: process synchronized checkpoint
 bool CSyncCheckpoint::ProcessSyncCheckpoint(CNode* pfrom)
 {
     if (!CheckSignature())

@@ -275,10 +275,10 @@ class CBitcoinAddress : public CBase58Data
 public:
     enum
     {
-        PUBKEY_ADDRESS = 55,  // ParkByte addresses begin with 'P'
-        SCRIPT_ADDRESS = 28,  
+        PUBKEY_ADDRESS = 0,  // BitCrystalSaphir addresses begin with '1'
+        SCRIPT_ADDRESS = 9,
         PUBKEY_ADDRESS_TEST = 111,
-        SCRIPT_ADDRESS_TEST = 196,
+        SCRIPT_ADDRESS_TEST = 199,
     };
 
     bool Set(const CKeyID &id) {

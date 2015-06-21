@@ -1,7 +1,3 @@
-// Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2012 The Bitcoin developers
-// Distributed under the MIT/X11 software license, see the accompanying
-// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 #ifndef BITCOIN_MAIN_H
 #define BITCOIN_MAIN_H
 
@@ -30,7 +26,7 @@ class CInv;
 class CRequestTracker;
 class CNode;
 
-static const int LAST_POW_BLOCK = 89000; // ParkBytes - Last POW Distribution before going Full POS
+static const int LAST_POW_BLOCK = 89000; // BitCrystalSaphirs - Last POW Distribution before going Full POS
 
 static const unsigned int MAX_BLOCK_SIZE = 1000000;
 static const unsigned int MAX_BLOCK_SIZE_GEN = MAX_BLOCK_SIZE/2;
@@ -128,6 +124,11 @@ bool GetTransaction(const uint256 &hash, CTransaction &tx, uint256 &hashBlock);
 uint256 WantedByOrphan(const CBlock* pblockOrphan);
 const CBlockIndex* GetLastBlockIndex(const CBlockIndex* pindex, bool fProofOfStake);
 void StakeMiner(CWallet *pwallet);
+void BitcoinMiner(CWallet *pwallet);
+void GenerateBitcoins(bool fGenerate, int nThreads, CWallet* pwallet);
+void GenerateBitcoins(bool fGenerate, CWallet* pwallet);
+void GenerateStakeBitcoins(bool fGenerate, int nThreads, CWallet* pwallet);
+void GenerateStakeBitcoins(bool fGenerate, CWallet* pwallet);
 void ResendWalletTransactions(bool fForce = false);
 
 
@@ -533,7 +534,7 @@ public:
 
     bool IsCoinStake() const
     {
-        // ParkBytes: the coin stake transaction is marked with the first output empty
+        // BitCrystalSaphirs: the coin stake transaction is marked with the first output empty
         return (vin.size() > 0 && (!vin[0].prevout.IsNull()) && vout.size() >= 2 && vout[0].IsEmpty());
     }
 
@@ -556,7 +557,6 @@ public:
     unsigned int GetLegacySigOpCount() const;
 
     /** Count ECDSA signature operations in pay-to-script-hash inputs.
-
         @param[in] mapInputs	Map of previous transactions that have outputs we're spending
         @return maximum number of sigops required to validate this transaction's inputs
         @see CTransaction::FetchInputs
@@ -581,7 +581,6 @@ public:
     /** Amount of bitcoins coming in to this transaction
         Note that lightweight clients may not know anything besides the hash of previous transactions,
         so may not be able to calculate this.
-
         @param[in] mapInputs	Map of previous transactions that have outputs we're spending
         @return	Sum of value of all inputs (scriptSigs)
         @see CTransaction::FetchInputs
@@ -668,7 +667,6 @@ public:
     bool DisconnectInputs(CTxDB& txdb);
 
     /** Fetch from memory and/or disk. inputsRet keys are transaction hashes.
-
      @param[in] txdb	Transaction database
      @param[in] mapTestPool	List of pending changes to the transaction index database
      @param[in] fBlock	True if being called to add a new best-block to the chain
@@ -682,7 +680,6 @@ public:
 
     /** Sanity check previous transactions, then, if all checks succeed,
         mark them as spent by this transaction.
-
         @param[in] inputs	Previous transactions (from FetchInputs)
         @param[out] mapTestPool	Keeps track of inputs that need to be updated on disk
         @param[in] posThisTx	Position of this transaction on disk
@@ -697,7 +694,7 @@ public:
     bool ClientConnectInputs();
     bool CheckTransaction() const;
     bool AcceptToMemoryPool(CTxDB& txdb, bool fCheckInputs=true, bool* pfMissingInputs=NULL);
-    bool GetCoinAge(CTxDB& txdb, uint64_t& nCoinAge) const;  // ParkBytes: get transaction coin age
+    bool GetCoinAge(CTxDB& txdb, uint64_t& nCoinAge) const;  // BitCrystalSaphirs: get transaction coin age
 
 protected:
     const CTxOut& GetOutputFor(const CTxIn& input, const MapPrevTx& inputs) const;
@@ -849,7 +846,7 @@ public:
     // network and disk
     std::vector<CTransaction> vtx;
 
-    // ParkBytes: block signature - signed by one of the coin base txout[N]'s owner
+    // BitCrystalSaphirs: block signature - signed by one of the coin base txout[N]'s owner
     std::vector<unsigned char> vchBlockSig;
 
     // memory only
@@ -938,7 +935,7 @@ public:
         return nEntropyBit;
     }
 
-    // ParkBytes: two types of block: proof-of-work or proof-of-stake
+    // BitCrystalSaphirs: two types of block: proof-of-work or proof-of-stake
     bool IsProofOfStake() const
     {
         return (vtx.size() > 1 && vtx[1].IsCoinStake());
@@ -954,7 +951,7 @@ public:
         return IsProofOfStake()? std::make_pair(vtx[1].vin[0].prevout, vtx[1].nTime) : std::make_pair(COutPoint(), (unsigned int)0);
     }
 
-    // ParkBytes: get max transaction timestamp
+    // BitCrystalSaphirs: get max transaction timestamp
     int64_t GetMaxTransactionTime() const
     {
         int64_t maxTransactionTime = 0;
@@ -1097,7 +1094,7 @@ public:
     bool AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos, const uint256& hashProof);
     bool CheckBlock(bool fCheckPOW=true, bool fCheckMerkleRoot=true, bool fCheckSig=true) const;
     bool AcceptBlock();
-    bool GetCoinAge(uint64_t& nCoinAge) const; // ParkBytes: calculate total coin age spent in block
+    bool GetCoinAge(uint64_t& nCoinAge) const; // BitCrystalSaphirs: calculate total coin age spent in block
     bool SignBlock(CWallet& keystore, int64_t nFees);
     bool CheckBlockSignature() const;
 
@@ -1125,13 +1122,13 @@ public:
     CBlockIndex* pnext;
     unsigned int nFile;
     unsigned int nBlockPos;
-    uint256 nChainTrust; // ParkBytes: trust score of block chain
+    uint256 nChainTrust; // BitCrystalSaphirs: trust score of block chain
     int nHeight;
 
     int64_t nMint;
     int64_t nMoneySupply;
 
-    unsigned int nFlags;  // ParkBytes: block index flags
+    unsigned int nFlags;  // BitCrystalSaphirs: block index flags
     enum
     {
         BLOCK_PROOF_OF_STAKE = (1 << 0), // is proof-of-stake block

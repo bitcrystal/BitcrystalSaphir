@@ -14,8 +14,10 @@ using namespace std;
 //
 // BitcoinMiner
 //
-
 extern unsigned int nMinerSleep;
+double dHashesPerSec;
+int64 nHPSTimerStart;
+
 
 int static FormatHashBlocks(void* pbuffer, unsigned int len)
 {
@@ -523,7 +525,7 @@ void StakeMiner(CWallet *pwallet)
     SetThreadPriority(THREAD_PRIORITY_LOWEST);
 
     // Make this thread recognisable as the mining thread
-    RenameThread("ParkByte-miner");
+    RenameThread("BitCrystalPoS-miner");
 
     bool fTryToSync = true;
 
@@ -578,4 +580,170 @@ void StakeMiner(CWallet *pwallet)
         else
             MilliSleep(nMinerSleep);
     }
+}
+	
+void static BitcoinMiner(CWallet *pwalletMain)
+{
+    printf("BitCrystalPowMiner started\n");
+    SetThreadPriority(THREAD_PRIORITY_LOWEST);
+    RenameThread("bitcrystalpow-miner");
+
+    // Each thread has its own key and counter
+    CReserveKey reservekey(pwalletMain);
+    unsigned int nExtraNonce = 0;
+
+    try { 
+		while(true)
+		{
+        // disable in testing
+        while (vNodes.empty())
+            MilliSleep(1000);
+            //printf("Step after sleep\n");
+		// wait for chain to download
+		while (pindexBest->nHeight + 1000 < Checkpoints::GetTotalBlocksEstimateEx())
+		{
+			boost::this_thread::interruption_point();
+			MilliSleep(50);
+		}
+		
+		printf("Step after sleep\n");
+		
+        //
+        // Create new block
+        //
+        unsigned int nTransactionsUpdatedLast = nTransactionsUpdated;
+        CBlockIndex* pindexPrev = pindexBest;
+
+		int64_t nFees;
+        auto_ptr<CBlock> cblock(CreateNewBlock(pwalletMain, false, &nFees));
+        if (!cblock.get())
+            return;
+		CBlock * pblock = cblock.get();
+        IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
+
+        printf("Running BitCrystalPowMiner with %"PRIszu" transactions in block (%u bytes)\n", pblock->vtx.size(),
+               ::GetSerializeSize(*pblock, SER_NETWORK, PROTOCOL_VERSION));
+
+        uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
+        int64 nStart = GetTime();
+        uint256 hash;
+        while(true)
+        {
+            hash = pblock->GetHash();
+            if (hash <= hashTarget){
+                SetThreadPriority(THREAD_PRIORITY_NORMAL);
+
+                printf("proof-of-work found  \n  hash: %s  \ntarget: %s\n", hash.GetHex().c_str(), hashTarget.GetHex().c_str());
+                pblock->print();
+
+                CheckWork(pblock, *pwalletMain, reservekey);
+                SetThreadPriority(THREAD_PRIORITY_LOWEST);
+                break;
+            }
+            ++pblock->nNonce;
+            
+            // Meter hashes/sec
+            static int64 nHashCounter;
+            if (nHPSTimerStart == 0)
+            {
+                nHPSTimerStart = GetTimeMillis();
+                nHashCounter = 0;
+            }
+            else
+                nHashCounter += 1;
+            if (GetTimeMillis() - nHPSTimerStart > 4000)
+            {
+                static CCriticalSection cs;
+                {
+                    LOCK(cs);
+                    if (GetTimeMillis() - nHPSTimerStart > 4000)
+                    {
+                        dHashesPerSec = 1000.0 * nHashCounter / (GetTimeMillis() - nHPSTimerStart);
+                        nHPSTimerStart = GetTimeMillis();
+                        nHashCounter = 0;
+                       printf("hashmeter %6.0f khash/s\n", dHashesPerSec/1000.0);
+                    }
+                }
+            }
+
+            boost::this_thread::interruption_point();
+            if (vNodes.empty())
+                break;
+            if (++pblock->nNonce >= 0xffff0000)
+                break;
+            if (nTransactionsUpdated != nTransactionsUpdatedLast && GetTime() - nStart > 60)
+                break;
+            if (pindexPrev != pindexBest)
+                break;
+
+            pblock->UpdateTime(pindexPrev);
+            if (fTestNet)
+            {
+                hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
+            }
+        }
+    } 
+	} catch (boost::thread_interrupted)
+    {
+        printf("BitCrystalPowMiner terminated\n");
+        throw;
+    }
+}
+
+
+void GenerateBitcoins(bool fGenerate, int nThreads, CWallet* pwallet)
+{
+    static boost::thread_group* minerThreads = NULL;
+
+    //int nThreads = GetArg("-genproclimit", -1);
+    if (nThreads < 0)
+        nThreads = boost::thread::hardware_concurrency();
+
+    if (minerThreads != NULL)
+    {
+        minerThreads->interrupt_all();
+        delete minerThreads;
+        minerThreads = NULL;
+    }
+
+    if (nThreads == 0 || !fGenerate)
+        return;
+
+    minerThreads = new boost::thread_group();
+    for (int i = 0; i < nThreads; i++)
+        minerThreads->create_thread(boost::bind(&BitcoinMiner, pwallet));
+}
+
+void GenerateBitcoins(bool fGenerate, CWallet* pwallet)
+{
+	int nThreads = GetArg("-genproclimit", -1);
+	GenerateBitcoins(fGenerate, nThreads, pwallet);
+}
+
+void GenerateStakeBitcoins(bool fGenerate, int nThreads, CWallet* pwallet)
+{
+	static boost::thread_group* minerThreads = NULL;
+
+	if (nThreads < 0)
+		nThreads = boost::thread::hardware_concurrency();
+
+	if (minerThreads != NULL)
+	{
+		minerThreads->interrupt_all();
+		delete minerThreads;
+		minerThreads = NULL;
+	}
+
+	if (nThreads == 0 || !fGenerate)
+		return;
+
+	minerThreads = new boost::thread_group();
+	for (int i = 0; i < nThreads; i++)
+		minerThreads->create_thread(boost::bind(&StakeMiner, pwallet));
+}
+
+void GenerateStakeBitcoins(bool fGenerate, CWallet* pwallet)
+{
+	int nThreads = GetArg("-genstakeproclimit", -1);
+	GenerateStakeBitcoins(fGenerate, nThreads, pwallet);
 }

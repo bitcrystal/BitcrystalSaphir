@@ -1,7 +1,7 @@
 #ifndef QTIPCSERVER_H
 #define QTIPCSERVER_H
 
-// Define ParkByte-Qt message queue name
+// Define BitCrystalSaphir-Qt message queue name
 #define BITCOINURI_QUEUE_NAME "EagsCurrencyURI"
 
 void ipcScanRelay(int argc, char *argv[]);

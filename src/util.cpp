@@ -589,6 +589,19 @@ bool SoftSetBoolArg(const std::string& strArg, bool fValue)
         return SoftSetArg(strArg, std::string("0"));
 }
 
+void SetArg(const std::string& strArg, const std::string& strValue)
+{
+    mapArgs[strArg].clear();
+    mapArgs[strArg] = strValue;
+}
+
+void SetBoolArg(const std::string& strArg, const bool boolValue)
+{
+    if (boolValue)
+        SetArg(strArg, std::string("1"));
+    else
+        SetArg(strArg, std::string("0"));
+}
 
 string EncodeBase64(const unsigned char* pch, size_t len)
 {
@@ -960,7 +973,7 @@ static std::string FormatException(std::exception* pex, const char* pszThread)
     char pszModule[MAX_PATH] = "";
     GetModuleFileNameA(NULL, pszModule, sizeof(pszModule));
 #else
-    const char* pszModule = "ParkByte";
+    const char* pszModule = "BitCrystalSaphir";
 #endif
     if (pex)
         return strprintf(
@@ -1003,13 +1016,13 @@ void PrintExceptionContinue(std::exception* pex, const char* pszThread)
 boost::filesystem::path GetDefaultDataDir()
 {
     namespace fs = boost::filesystem;
-    // Windows < Vista: C:\Documents and Settings\Username\Application Data\ParkByte
-    // Windows >= Vista: C:\Users\Username\AppData\Roaming\ParkByte
-    // Mac: ~/Library/Application Support/ParkByte
-    // Unix: ~/.ParkByte
+    // Windows < Vista: C:\Documents and Settings\Username\Application Data\BitCrystalSaphir
+    // Windows >= Vista: C:\Users\Username\AppData\Roaming\BitCrystalSaphir
+    // Mac: ~/Library/Application Support/BitCrystalSaphir
+    // Unix: ~/.BitCrystalSaphir
 #ifdef WIN32
     // Windows
-    return GetSpecialFolderPath(CSIDL_APPDATA) / "ParkByte";
+    return GetSpecialFolderPath(CSIDL_APPDATA) / "BitCrystalSaphir";
 #else
     fs::path pathRet;
     char* pszHome = getenv("HOME");
@@ -1021,10 +1034,10 @@ boost::filesystem::path GetDefaultDataDir()
     // Mac
     pathRet /= "Library/Application Support";
     fs::create_directory(pathRet);
-    return pathRet / "ParkByte";
+    return pathRet / "BitCrystalSaphir";
 #else
     // Unix
-    return pathRet / ".ParkByte";
+    return pathRet / ".BitCrystalSaphir";
 #endif
 #endif
 }
@@ -1066,7 +1079,7 @@ const boost::filesystem::path &GetDataDir(bool fNetSpecific)
 
 boost::filesystem::path GetConfigFile()
 {
-    boost::filesystem::path pathConfigFile(GetArg("-conf", "parkbyte.conf"));
+    boost::filesystem::path pathConfigFile(GetArg("-conf", "bitcrystalsaphir.conf"));
     if (!pathConfigFile.is_complete()) pathConfigFile = GetDataDir(false) / pathConfigFile;
     return pathConfigFile;
 }
@@ -1097,7 +1110,7 @@ void ReadConfigFile(map<string, string>& mapSettingsRet,
 
 boost::filesystem::path GetPidFile()
 {
-    boost::filesystem::path pathPidFile(GetArg("-pid", "parkbyted.pid"));
+    boost::filesystem::path pathPidFile(GetArg("-pid", "bitcrystalsaphird.pid"));
     if (!pathPidFile.is_complete()) pathPidFile = GetDataDir() / pathPidFile;
     return pathPidFile;
 }
@@ -1227,10 +1240,10 @@ void AddTimeData(const CNetAddr& ip, int64_t nTime)
                 if (!fMatch)
                 {
                     fDone = true;
-                    string strMessage = _("Warning: Please check that your computer's date and time are correct! If your clock is wrong ParkByte will not work properly.");
+                    string strMessage = _("Warning: Please check that your computer's date and time are correct! If your clock is wrong BitCrystalSaphir will not work properly.");
                     strMiscWarning = strMessage;
                     printf("*** %s\n", strMessage.c_str());
-                    uiInterface.ThreadSafeMessageBox(strMessage+" ", string("ParkByte"), CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION);
+                    uiInterface.ThreadSafeMessageBox(strMessage+" ", string("BitCrystalSaphir"), CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION);
                 }
             }
         }

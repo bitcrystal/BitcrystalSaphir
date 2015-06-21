@@ -35,6 +35,9 @@
 #include <stdint.h>
 #include <inttypes.h>
 
+typedef long long  int64;
+typedef unsigned long long  uint64;
+
 static const int64_t COIN = 100000000;
 static const int64_t CENT = 1000000;
 
@@ -424,8 +427,8 @@ bool SoftSetArg(const std::string& strArg, const std::string& strValue);
  */
 bool SoftSetBoolArg(const std::string& strArg, bool fValue);
 
-
-
+void SetArg(const std::string& strArg, const std::string& strValue);
+void SetBoolArg(const std::string& strArg, const bool boolValue);
 
 
 

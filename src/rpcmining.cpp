@@ -13,6 +13,146 @@
 using namespace json_spirit;
 using namespace std;
 
+Value getgenerate(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() != 0)
+        throw runtime_error(
+            "getgenerate\n"
+            "Returns true or false.");
+
+    return GetBoolArg("-gen");
+}
+
+
+Value setgenerate(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() < 1 || params.size() > 2)
+        throw runtime_error(
+            "setgenerate <generate> [genproclimit]\n"
+            "<generate> is true or false to turn generation on or off.\n"
+            "Generation is limited to [genproclimit] processors, -1 is unlimited.");
+
+    bool fGenerate = true;
+    if (params.size() > 0)
+        fGenerate = params[0].get_bool();
+
+    if (params.size() > 1)
+    {
+        int nGenProcLimit = params[1].get_int();
+        mapArgs["-genproclimit"] = itostr(nGenProcLimit);
+        if (nGenProcLimit == 0)
+            fGenerate = false;
+    }
+    mapArgs["-gen"] = (fGenerate ? "1" : "0");
+
+    GenerateBitcoins(fGenerate, pwalletMain);
+    return Value::null;
+}
+
+Value getstakegenerate(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() != 0)
+        throw runtime_error(
+            "getstakegenerate\n"
+            "Returns true or false.");
+
+    return GetBoolArg("-genstake");
+}
+
+
+Value setstakegenerate(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() < 1 || params.size() > 2)
+        throw runtime_error(
+            "setstakegenerate <generate> [genproclimit]\n"
+            "<generate> is true or false to turn generation on or off.\n"
+            "Generation is limited to [genproclimit] processors, -1 is unlimited.");
+
+    bool fGenerate = true;
+    if (params.size() > 0)
+        fGenerate = params[0].get_bool();
+
+    if (params.size() > 1)
+    {
+        int nGenProcLimit = params[1].get_int();
+        mapArgs["-genstakeproclimit"] = itostr(nGenProcLimit);
+        if (nGenProcLimit == 0)
+            fGenerate = false;
+    }
+    mapArgs["-genstake"] = (fGenerate ? "1" : "0");
+
+    GenerateStakeBitcoins(fGenerate, pwalletMain);
+    return Value::null;
+}
+
+
+Value gethashespersec(const Array& params, bool fHelp)
+{
+    if (fHelp || params.size() != 0)
+        throw runtime_error(
+            "gethashespersec\n"
+            "Returns a recent hashes per second performance measurement while generating.");
+
+    if (GetTimeMillis() - nHPSTimerStart > 8000)
+        return (boost::int64_t)0;
+    return (boost::int64_t)dHashesPerSec;
+}
+
+
+// BitCrystal: Return average network hashes per second based on last number of blocks.
+
+Value GetNetworkHashPS(int lookup) {
+
+    if (pindexBest == NULL)
+
+        return 0;
+
+
+
+    // If lookup is larger than chain, then set it to chain length.
+
+    if (lookup > pindexBest->nHeight)
+
+        lookup = pindexBest->nHeight;
+
+
+
+    CBlockIndex* pindexPrev = pindexBest;
+
+    for (int i = 0; i < lookup; i++)
+
+        pindexPrev = pindexPrev->pprev;
+
+
+
+    double timeDiff = pindexBest->GetBlockTime() - pindexPrev->GetBlockTime();
+
+    double timePerBlock = timeDiff / lookup;
+
+
+
+    return (boost::int64_t)((((double)GetDifficulty() * pow(2.0, 32)) / timePerBlock)/256);
+
+}
+
+
+Value getnetworkhashps(const Array& params, bool fHelp)
+{
+
+    if (fHelp || params.size() > 1)
+
+        throw runtime_error(
+
+            "getnetworkhashps\n"
+
+            "Returns the estimated network hashes per second based on the last 1440 blocks.");
+
+
+
+    return GetNetworkHashPS(1440);
+
+}
+
 Value getsubsidy(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)
@@ -103,10 +243,10 @@ Value getworkex(const Array& params, bool fHelp)
         );
 
     if (vNodes.empty())
-        throw JSONRPCError(-9, "ParkByte is not connected!");
+        throw JSONRPCError(-9, "BitCrystalSaphir is not connected!");
 
     if (IsInitialBlockDownload())
-        throw JSONRPCError(-10, "ParkByte is downloading blocks...");
+        throw JSONRPCError(-10, "BitCrystalSaphir is downloading blocks...");
 
     if (pindexBest->nHeight >= LAST_POW_BLOCK)
         throw JSONRPCError(RPC_MISC_ERROR, "No more PoW blocks");
@@ -237,10 +377,10 @@ Value getwork(const Array& params, bool fHelp)
             "If [data] is specified, tries to solve the block and returns true if it was successful.");
 
     if (vNodes.empty())
-        throw JSONRPCError(RPC_CLIENT_NOT_CONNECTED, "ParkByte is not connected!");
+        throw JSONRPCError(RPC_CLIENT_NOT_CONNECTED, "BitCrystalSaphir is not connected!");
 
     if (IsInitialBlockDownload())
-        throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "ParkByte is downloading blocks...");
+        throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "BitCrystalSaphir is downloading blocks...");
 
     if (pindexBest->nHeight >= LAST_POW_BLOCK)
         throw JSONRPCError(RPC_MISC_ERROR, "No more PoW blocks");
@@ -339,7 +479,6 @@ Value getwork(const Array& params, bool fHelp)
     }
 }
 
-
 Value getblocktemplate(const Array& params, bool fHelp)
 {
     if (fHelp || params.size() > 1)
@@ -381,10 +520,10 @@ Value getblocktemplate(const Array& params, bool fHelp)
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid mode");
 
     if (vNodes.empty())
-        throw JSONRPCError(RPC_CLIENT_NOT_CONNECTED, "ParkByte is not connected!");
+        throw JSONRPCError(RPC_CLIENT_NOT_CONNECTED, "BitCrystalSaphir is not connected!");
 
     if (IsInitialBlockDownload())
-        throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "ParkByte is downloading blocks...");
+        throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "BitCrystalSaphir is downloading blocks...");
 
     if (pindexBest->nHeight >= LAST_POW_BLOCK)
         throw JSONRPCError(RPC_MISC_ERROR, "No more PoW blocks");

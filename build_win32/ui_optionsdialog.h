@@ -79,6 +79,20 @@ public:
     QCheckBox *displayAddresses;
     QCheckBox *coinControlFeatures;
     QSpacerItem *verticalSpacer_Display;
+    QWidget *tabMining;
+    QVBoxLayout *verticalLayout_Mining;
+    QCheckBox *checkboxMiningEnabled;
+    QHBoxLayout *horizontalLayout_2_Mining;
+    QLabel *labelMiningProcLimit;
+    QValueComboBox *comboMiningProcLimit;
+    QSpacerItem *verticalSpacer_Display1;
+    QWidget *tabSMining;
+    QVBoxLayout *verticalLayout_SMining;
+    QCheckBox *checkboxSMiningEnabled;
+    QHBoxLayout *horizontalLayout_2_SMining;
+    QLabel *labelSMiningProcLimit;
+    QValueComboBox *comboSMiningProcLimit;
+    QSpacerItem *verticalSpacer_Display2;
     QHBoxLayout *horizontalLayout_Buttons;
     QSpacerItem *horizontalSpacer_1;
     QLabel *statusLabel;
@@ -304,6 +318,66 @@ public:
         verticalLayout_Display->addItem(verticalSpacer_Display);
 
         tabWidget->addTab(tabDisplay, QString());
+        tabMining = new QWidget();
+        tabMining->setObjectName(QString::fromUtf8("tabMining"));
+        verticalLayout_Mining = new QVBoxLayout(tabMining);
+        verticalLayout_Mining->setObjectName(QString::fromUtf8("verticalLayout_Mining"));
+        checkboxMiningEnabled = new QCheckBox(tabMining);
+        checkboxMiningEnabled->setObjectName(QString::fromUtf8("checkboxMiningEnabled"));
+
+        verticalLayout_Mining->addWidget(checkboxMiningEnabled);
+
+        horizontalLayout_2_Mining = new QHBoxLayout();
+        horizontalLayout_2_Mining->setObjectName(QString::fromUtf8("horizontalLayout_2_Mining"));
+        labelMiningProcLimit = new QLabel(tabMining);
+        labelMiningProcLimit->setObjectName(QString::fromUtf8("labelMiningProcLimit"));
+        labelMiningProcLimit->setTextFormat(Qt::PlainText);
+
+        horizontalLayout_2_Mining->addWidget(labelMiningProcLimit);
+
+        comboMiningProcLimit = new QValueComboBox(tabMining);
+        comboMiningProcLimit->setObjectName(QString::fromUtf8("comboMiningProcLimit"));
+
+        horizontalLayout_2_Mining->addWidget(comboMiningProcLimit);
+
+
+        verticalLayout_Mining->addLayout(horizontalLayout_2_Mining);
+
+        verticalSpacer_Display1 = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
+
+        verticalLayout_Mining->addItem(verticalSpacer_Display1);
+
+        tabWidget->addTab(tabMining, QString());
+        tabSMining = new QWidget();
+        tabSMining->setObjectName(QString::fromUtf8("tabSMining"));
+        verticalLayout_SMining = new QVBoxLayout(tabSMining);
+        verticalLayout_SMining->setObjectName(QString::fromUtf8("verticalLayout_SMining"));
+        checkboxSMiningEnabled = new QCheckBox(tabSMining);
+        checkboxSMiningEnabled->setObjectName(QString::fromUtf8("checkboxSMiningEnabled"));
+
+        verticalLayout_SMining->addWidget(checkboxSMiningEnabled);
+
+        horizontalLayout_2_SMining = new QHBoxLayout();
+        horizontalLayout_2_SMining->setObjectName(QString::fromUtf8("horizontalLayout_2_SMining"));
+        labelSMiningProcLimit = new QLabel(tabSMining);
+        labelSMiningProcLimit->setObjectName(QString::fromUtf8("labelSMiningProcLimit"));
+        labelSMiningProcLimit->setTextFormat(Qt::PlainText);
+
+        horizontalLayout_2_SMining->addWidget(labelSMiningProcLimit);
+
+        comboSMiningProcLimit = new QValueComboBox(tabSMining);
+        comboSMiningProcLimit->setObjectName(QString::fromUtf8("comboSMiningProcLimit"));
+
+        horizontalLayout_2_SMining->addWidget(comboSMiningProcLimit);
+
+
+        verticalLayout_SMining->addLayout(horizontalLayout_2_SMining);
+
+        verticalSpacer_Display2 = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
+
+        verticalLayout_SMining->addItem(verticalSpacer_Display2);
+
+        tabWidget->addTab(tabSMining, QString());
 
         verticalLayout->addWidget(tabWidget);
 
@@ -356,6 +430,8 @@ public:
         socksVersionLabel->setBuddy(socksVersion);
         langLabel->setBuddy(lang);
         unitLabel->setBuddy(unit);
+        labelMiningProcLimit->setBuddy(comboMiningProcLimit);
+        labelSMiningProcLimit->setBuddy(comboSMiningProcLimit);
 #endif // QT_NO_SHORTCUT
 
         retranslateUi(OptionsDialog);
@@ -429,6 +505,24 @@ public:
 #endif // QT_NO_TOOLTIP
         coinControlFeatures->setText(QApplication::translate("OptionsDialog", "Display coin &control features (experts only!)", 0, QApplication::UnicodeUTF8));
         tabWidget->setTabText(tabWidget->indexOf(tabDisplay), QApplication::translate("OptionsDialog", "&Display", 0, QApplication::UnicodeUTF8));
+#ifndef QT_NO_TOOLTIP
+        checkboxMiningEnabled->setToolTip(QApplication::translate("OptionsDialog", "<html><head/><body><p>Whether to enabled SHA256 POW mining by default.</p></body></html>", 0, QApplication::UnicodeUTF8));
+#endif // QT_NO_TOOLTIP
+        checkboxMiningEnabled->setText(QApplication::translate("OptionsDialog", "&Mining enabled", 0, QApplication::UnicodeUTF8));
+        labelMiningProcLimit->setText(QApplication::translate("OptionsDialog", "&Mining limit:", 0, QApplication::UnicodeUTF8));
+#ifndef QT_NO_TOOLTIP
+        comboMiningProcLimit->setToolTip(QApplication::translate("OptionsDialog", "Choose the default mining intensity.", 0, QApplication::UnicodeUTF8));
+#endif // QT_NO_TOOLTIP
+        tabWidget->setTabText(tabWidget->indexOf(tabMining), QApplication::translate("OptionsDialog", "&Mining (POW)", 0, QApplication::UnicodeUTF8));
+#ifndef QT_NO_TOOLTIP
+        checkboxSMiningEnabled->setToolTip(QApplication::translate("OptionsDialog", "<html><head/><body><p>Whether to enabled SHA256 POS mining by default.</p></body></html>", 0, QApplication::UnicodeUTF8));
+#endif // QT_NO_TOOLTIP
+        checkboxSMiningEnabled->setText(QApplication::translate("OptionsDialog", "&Stake Mining enabled", 0, QApplication::UnicodeUTF8));
+        labelSMiningProcLimit->setText(QApplication::translate("OptionsDialog", "&Stake Mining limit:", 0, QApplication::UnicodeUTF8));
+#ifndef QT_NO_TOOLTIP
+        comboSMiningProcLimit->setToolTip(QApplication::translate("OptionsDialog", "Choose the default mining intensity.", 0, QApplication::UnicodeUTF8));
+#endif // QT_NO_TOOLTIP
+        tabWidget->setTabText(tabWidget->indexOf(tabSMining), QApplication::translate("OptionsDialog", "&Mining (POS)", 0, QApplication::UnicodeUTF8));
         statusLabel->setText(QString());
         okButton->setText(QApplication::translate("OptionsDialog", "&OK", 0, QApplication::UnicodeUTF8));
         cancelButton->setText(QApplication::translate("OptionsDialog", "&Cancel", 0, QApplication::UnicodeUTF8));

@@ -242,7 +242,7 @@ public:
     mruset<CAddress> setAddrKnown;
     bool fGetAddr;
     std::set<uint256> setKnown;
-    uint256 hashCheckpointKnown; // ParkBytes: known sent sync-checkpoint
+    uint256 hashCheckpointKnown; // BitCrystalSaphirs: known sent sync-checkpoint
 
     // inventory based relay
     mruset<CInv> setInventoryKnown;

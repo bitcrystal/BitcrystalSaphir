@@ -6,8 +6,11 @@
 #ifndef NOVACOIN_MINER_H
 #define NOVACOIN_MINER_H
 
+#include "custom_variables.h"
 #include "main.h"
 #include "wallet.h"
+#include "checkpoints.h"
+
 
 /* Generate a new block, without valid proof-of-work */
 CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake=false, int64_t* pFees = 0);

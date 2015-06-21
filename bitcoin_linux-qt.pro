@@ -1,6 +1,6 @@
-# ParkByte (Crypto brought to Parking System)
+# BitCrystalSaphir (Crypto brought to Parking System)
 TEMPLATE = app
-TARGET = ParkByte-qt
+TARGET = BitCrystalSaphir-qt
 VERSION = 1.0.0.0
 INCLUDEPATH += src src/json src/qt src/tor
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
@@ -159,7 +159,8 @@ QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Wno-ignored-qu
 
 # Input
 DEPENDPATH += src src/json src/qt
-HEADERS += src/convert_functions.h \
+HEADERS += src/custom_variables.h \
+    src/convert_functions.h \
 	src/base64.h \
 	src/rand.h \
 	src/random.h \
@@ -436,8 +437,8 @@ macx:HEADERS += src/qt/macdockiconhandler.h
 macx:OBJECTIVE_SOURCES += src/qt/macdockiconhandler.mm
 macx:LIBS += -framework Foundation -framework ApplicationServices -framework AppKit
 macx:DEFINES += MAC_OSX MSG_NOSIGNAL=0
-macx:ICON = src/qt/res/icons/parkbyte.icns
-macx:TARGET = "ParkByte-Qt"
+macx:ICON = src/qt/res/icons/bitcrystalsaphir.icns
+macx:TARGET = "BitCrystalSaphir-Qt"
 macx:QMAKE_CFLAGS_THREAD += -pthread
 macx:QMAKE_LFLAGS_THREAD += -pthread
 macx:QMAKE_CXXFLAGS_THREAD += -pthread
