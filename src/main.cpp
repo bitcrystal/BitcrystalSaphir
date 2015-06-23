@@ -42,11 +42,11 @@ CBigNum bnProofOfStakeLimit(~uint256(0) >> 20); //  BitCrystalSaphirs - PoS star
 CBigNum bnProofOfWorkLimitTestNet(~uint256(0) >> 16); // BitCrystalSaphirs - PoW starting difficulty on Testnet
 CBigNum bnProofOfWorkFirstBlock(~uint256(0) >> 30);
 
-static const int64_t nTargetTimespan = 30 * 60;  // 30 minutes
+static const int64_t nTargetTimespan = 60 * 60;  // 30 minutes
+unsigned int nTargetSpacing = 1 * 60; // 1 minute
 static const int64_t nInterval = nTargetTimespan / nTargetSpacing;
 static const int64_t nDiffChangeTarget = 1;
 
-unsigned int nTargetSpacing = 1 * 60; // 1 minute
 unsigned int nStakeMinAge = 1 * 60 * 60; // 1 hour
 unsigned int nStakeMaxAge = -1; // BitCrystalSaphirs - unlimited
 unsigned int nModifierInterval = 10 * 60; // BitCrystalSaphirs - time to elapse before new modifier is computed
@@ -984,31 +984,7 @@ uint256 WantedByOrphan(const CBlock* pblockOrphan)
 int64_t GetProofOfWorkReward(int64_t nFees)
 {
 
-    int64_t nSubsidy = 0 * COIN;
-    
-    if (pindexBest->nHeight == 1)
-    {
-      nSubsidy = 2000000 * COIN; // 20% of the 10 millions on 1st Block as Premine
-      return nSubsidy + nFees;
-    }
-    
-    else if (pindexBest->nHeight <= 101)
-    {
-      nSubsidy = 0 * COIN; // 
-      return nSubsidy + nFees;
-    }
-	
-	else if (pindexBest->nHeight <= 88900)
-    {
-      nSubsidy = 90 * COIN; // ~60 days and few hours mining
-      return nSubsidy + nFees;
-    }
-    
-    else
-    {
-      nSubsidy = 0 * COIN;
-      return nSubsidy + nFees;
-    }
+    int64_t nSubsidy = 25 * COIN;
 	
     if (fDebug && GetBoolArg("-printcreation"))
         printf("GetProofOfWorkReward() : create=%s nSubsidy=%"PRId64"\n", FormatMoney(nSubsidy).c_str(), nSubsidy);
@@ -1018,20 +994,18 @@ int64_t GetProofOfWorkReward(int64_t nFees)
 
 const int DAILY_BLOCKCOUNT =  1440;
 const int YEARLY_BLOCKCOUNT = 525600;	// 365 * 1440
+const int MIN_PERCENT = 1;
+const int MAX_PERCENT = 5;
+
 // miner's coin stake reward based on coin age spent (coin-days)
 int64_t GetProofOfStakeReward(int64_t nCoinAge, int64_t nFees)
 {
-
-    int64_t nRewardCoinYear = MAX_MINT_PROOF_OF_STAKE;
-
-    if(pindexBest->nHeight > YEARLY_BLOCKCOUNT)
-				nRewardCoinYear = 20 / MAX_MINT_PROOF_OF_STAKE * nCoinAge / 365; // year2 (4%)
-			else if(pindexBest->nHeight > (2 * YEARLY_BLOCKCOUNT))
-				nRewardCoinYear = 15 / MAX_MINT_PROOF_OF_STAKE * nCoinAge / 365; // year3 (3%)
+	int64_t percent = MAX_PERCENT;
+	int64_t year = (pindexBest->nHeight / YEARLY_BLOCKCOUNT);
+	percent -= year >= MAX_PERCENT ? MAX_PERCENT-MIN_PERCENT : year;
+	percent = percent * COIN_YEAR_REWARD;
+    int64_t nSubsidy = nCoinAge * percent * 33 / (365 * 33 + 8); // year1 (5%)
 	
-        int64_t nSubsidy = nCoinAge * COIN_YEAR_REWARD * 33 / (365 * 33 + 8); // year1 (5%)
-
-
     if (fDebug && GetBoolArg("-printcreation"))
         printf("GetProofOfStakeReward(): create=%s nCoinAge=%"PRId64"\n", FormatMoney(nSubsidy).c_str(), nCoinAge);
 
@@ -2537,10 +2511,10 @@ bool LoadBlockIndex(bool fAllowNew)
     {
         if (!fAllowNew)
             return false;
-
-        const char* pszTimestamp = "http://money.cnn.com/2015/05/01/technology/tesla-powerwall-battery-product/index.html";
+		
+        const char* pszTimestamp = "www.bitcrystalsaphir.nw.de.cf.gf.de/gfailsh/geef/ddfe";
         CTransaction txNew;
-        txNew.nTime = 1430485959;
+        txNew.nTime = 1435004446;
         txNew.vin.resize(1);
         txNew.vout.resize(1);
         txNew.vin[0].scriptSig = CScript() << 0 << CBigNum(42) << vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
@@ -2550,18 +2524,45 @@ bool LoadBlockIndex(bool fAllowNew)
         block.hashPrevBlock = 0;
         block.hashMerkleRoot = block.BuildMerkleTree();
         block.nVersion = 1;
-        block.nTime    = 1430485959;
+        block.nTime    = 1435004446;
         block.nBits    = bnProofOfWorkLimit.GetCompact();
-        block.nNonce   = 21380081;
+        block.nNonce   = 14354446;
         if(fTestNet)
         {
-            block.nNonce   = 21380081;
+            block.nNonce   = 14354446;
         }
-		
+		// If genesis block hash does not match, then generate new genesis hash.
+		if (block.GetHash() != hashGenesisBlock)
+		{
+			printf("Searching for genesis block...\n");
+			// This will figure out a valid hash and Nonce if you're
+			// creating a different genesis block:
+			uint256 hashTarget = CBigNum().SetCompact(block.nBits).getuint256();
+			uint256 thash;
 
+			while(true)
+			{
+				thash = scrypt_blockhash(BEGIN(block.nVersion));
+				if (thash <= hashTarget)
+					break;
+				if ((block.nNonce & 0xFFF) == 0)
+				{
+					printf("nonce %08X: hash = %s (target = %s)\n", block.nNonce, thash.ToString().c_str(), hashTarget.ToString().c_str());
+				}
+				++block.nNonce;
+				if (block.nNonce == 0)
+				{
+					printf("NONCE WRAPPED, incrementing time\n");
+					++block.nTime;
+				}
+			}
+			printf("block.nTime = %u \n", block.nTime);
+			printf("block.nNonce = %u \n", block.nNonce);
+			printf("block.GetHash = %s\n", block.GetHash().ToString().c_str());
+		}
         // debug print
-        assert(block.hashMerkleRoot == uint256("0xc8cf9167025e3d991c035b1cb703a9fbcf1ea48a9d5323d58110689c8bfc1b33"));
-	    block.print();
+		block.print();
+        assert(block.hashMerkleRoot == uint256("0x1d98e649f4f3c2cae1618048b3f1e31160585339c880465117cf3f9dc2768663"));
         assert(block.GetHash() == (!fTestNet ? hashGenesisBlock : hashGenesisBlockTestNet));
         assert(block.CheckBlock());
 

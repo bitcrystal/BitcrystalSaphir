@@ -127,9 +127,9 @@ public:
 
     void retranslateUi(QDialog *AboutDialog)
     {
-        AboutDialog->setWindowTitle(QApplication::translate("AboutDialog", "About ParkByte", 0, QApplication::UnicodeUTF8));
-        label->setText(QApplication::translate("AboutDialog", "<b>ParkByte</b> version", 0, QApplication::UnicodeUTF8));
-        copyrightLabel->setText(QApplication::translate("AboutDialog", "Copyright \302\251 2015 The ParkByte Developers", 0, QApplication::UnicodeUTF8));
+        AboutDialog->setWindowTitle(QApplication::translate("AboutDialog", "About BitCrystalSaphir", 0, QApplication::UnicodeUTF8));
+        label->setText(QApplication::translate("AboutDialog", "<b>BitCrystalSaphir</b> version", 0, QApplication::UnicodeUTF8));
+        copyrightLabel->setText(QApplication::translate("AboutDialog", "Copyright \302\251 2015 The BitCrystalSaphir Developers", 0, QApplication::UnicodeUTF8));
         label_2->setText(QApplication::translate("AboutDialog", "\n"
 "This is experimental software.\n"
 "\n"

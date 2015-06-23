@@ -26,18 +26,18 @@ class CInv;
 class CRequestTracker;
 class CNode;
 
-static const int LAST_POW_BLOCK = 89000; // BitCrystalSaphirs - Last POW Distribution before going Full POS
+static const uint64 LAST_POW_BLOCK = 800000; // BitCrystalSaphirs - Last POW Distribution before going Full POS
 
-static const unsigned int MAX_BLOCK_SIZE = 1000000;
-static const unsigned int MAX_BLOCK_SIZE_GEN = MAX_BLOCK_SIZE/2;
-static const unsigned int MAX_BLOCK_SIGOPS = MAX_BLOCK_SIZE/50;
-static const unsigned int MAX_ORPHAN_TRANSACTIONS = MAX_BLOCK_SIZE/100;
-static const unsigned int MAX_INV_SZ = 50000;
+static const uint64 MAX_BLOCK_SIZE = 840000;
+static const uint64 MAX_BLOCK_SIZE_GEN = MAX_BLOCK_SIZE/2;
+static const uint64 MAX_BLOCK_SIGOPS = MAX_BLOCK_SIZE/50;
+static const uint64 MAX_ORPHAN_TRANSACTIONS = MAX_BLOCK_SIZE/100;
+static const uint64 MAX_INV_SZ = 50000;
 static const int64_t MIN_TX_FEE = 1000;
 static const int64_t MIN_RELAY_TX_FEE = MIN_TX_FEE;
-static const int64_t MAX_MONEY = 25000000 * COIN; // 25,000,000 PKB
-static const int64_t COIN_YEAR_REWARD = 5 * CENT; // 5% for first year
-static const int64_t MAX_MINT_PROOF_OF_STAKE = 0.05 * COIN;	// 5% annual interest (first year)
+static const int64_t MAX_MONEY = 21000000 * COIN; // 21,000,000 BTCSA
+static const int64_t COIN_YEAR_REWARD = 1 * CENT; // 1% for first year
+static const int64_t MAX_MINT_PROOF_OF_STAKE = 0.05 * COIN;	// 1% annual interest (first year)
 
 inline bool MoneyRange(int64_t nValue) { return (nValue >= 0 && nValue <= MAX_MONEY); }
 // Threshold for nLockTime: below this value it is interpreted as block number, otherwise as UNIX timestamp.
@@ -48,8 +48,8 @@ static const int fHaveUPnP = true;
 #else
 static const int fHaveUPnP = false;
 #endif
-static const uint256 hashGenesisBlock("0x000000a49664091ce50794d84fb243cde97738534b554b2022fa00a029d0ab7c");
-static const uint256 hashGenesisBlockTestNet("0x000000a49664091ce50794d84fb243cde97738534b554b2022fa00a029d0ab7c");
+static const uint256 hashGenesisBlock("0xcb10a1f9c584c12e2f3382a9a508111e29f29007aaef957ab0fd0339718cb3ca");
+static const uint256 hashGenesisBlockTestNet("0xcb10a1f9c584c12e2f3382a9a508111e29f29007aaef957ab0fd0339718cb3ca");
 
 inline int64_t PastDrift(int64_t nTime)   { return nTime - 10 * 60; } // up to 10 minutes from the past
 inline int64_t FutureDrift(int64_t nTime) { return nTime + 10 * 60; } // up to 10 minutes from the future
