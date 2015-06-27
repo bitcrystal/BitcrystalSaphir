@@ -26,6 +26,7 @@ INPUT(
 ./build_win32_objects/netbase.o
 ./build_win32_objects/key.o
 ./build_win32_objects/script.o
+./build_win32_objects/script_ex.o
 ./build_win32_objects/main.o
 ./build_win32_objects/miner.o
 ./build_win32_objects/init.o

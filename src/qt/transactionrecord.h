@@ -2,6 +2,7 @@
 #define TRANSACTIONRECORD_H
 
 #include "uint256.h"
+#include "main.h"
 
 #include <QList>
 
@@ -13,10 +14,11 @@ class CWalletTx;
 class TransactionStatus
 {
 public:
-    TransactionStatus():
+	TransactionStatus():
             countsForBalance(false), sortKey(""),
-            matures_in(0), status(Offline), depth(0), open_for(0), cur_num_blocks(-1)
-    { }
+            matures_in(0), status(Offline), depth(0), open_for(0), cur_num_blocks(-1), burnIsMature(false)
+	{ }
+
 
     enum Status {
         Confirmed,          /**< Have 6 or more confirmations (normal tx) or fully mature (mined tx) **/
@@ -28,6 +30,7 @@ public:
         Confirming,         /**< Confirmed, but waiting for the recommended number of confirmations **/
         Conflicted,         /**< Conflicts with other transaction or mempool **/
         /// Generated (mined) transactions
+		Mature,
         Immature,           /**< Mined but waiting for maturity */
         MaturesWarning,     /**< Transaction will likely not mature because no nodes have confirmed */
         NotAccepted         /**< Mined but not accepted */
@@ -50,6 +53,10 @@ public:
     int64_t open_for; /**< Timestamp if status==OpenUntilDate, otherwise number of blocks */
     /**@}*/
 
+	//Burn transaction specifics
+	bool burnIsMature; //if the burn transaction is mature
+	int64 burnDepth; //specific for burn transactions only, otherwise value is 0
+
     /** Current number of blocks (to know whether cached status is still valid) */
     int cur_num_blocks;
 };
@@ -68,11 +75,16 @@ public:
         SendToOther,
         RecvWithAddress,
         RecvFromOther,
-        SendToSelf
+        SendToSelf,
+		StakeMint,
+		BurnMint,
+		Burned
     };
 
-    /** Number of confirmation recommended for accepting a transaction */
     static const int RecommendedNumConfirmations = 10;
+	static const int NumConfirmations = 6;
+    static const int RecommendedBurnConfirmations = 10;
+	static const int NumBurnConfirmations = BURN_MIN_CONFIRMS;
 
     TransactionRecord():
             hash(), time(0), type(Other), address(""), debit(0), credit(0), idx(0)
@@ -96,7 +108,7 @@ public:
     /** Decompose CWallet transaction to model transaction records.
      */
     static bool showTransaction(const CWalletTx &wtx);
-    static QList<TransactionRecord> decomposeTransaction(const CWallet *wallet, const CWalletTx &wtx);
+    static QList<TransactionRecord> decomposeTransaction(const CWallet *wallet, const CWalletTx &wtx,bool fBurnMint=false);
 
     /** @name Immutable transaction attributes
       @{*/

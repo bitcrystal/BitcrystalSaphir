@@ -1381,6 +1381,92 @@ int CommandLineRPC(int argc, char *argv[])
     return nRet;
 }
 
+void WalletTxToJSON(const CWalletTx& wtx, Object& entry)
+{
+    int confirms = wtx.GetDepthInMainChain();
+
+	entry.push_back(Pair("confirmations", confirms));
+	if(confirms)
+	{
+		entry.push_back(Pair("blockhash", wtx.hashBlock.GetHex()));
+		entry.push_back(Pair("blockindex", wtx.nIndex));
+	}
+	entry.push_back(Pair("txid", wtx.GetHash().GetHex()));
+	entry.push_back(Pair("time", (boost::int64_t)wtx.GetTxTime()));
+	BOOST_FOREACH(const PAIRTYPE(string,string)& item, wtx.mapValue)
+		entry.push_back(Pair(item.first, item.second));
+}
+
+Array getBurnCoinBalances(int64 &netBurnCoins, int64 &nEffBurnCoins, int64 &immatureCoins)
+{
+  Array ret;
+  netBurnCoins = nEffBurnCoins = immatureCoins = 0;
+
+  BOOST_FOREACH(const uint256 &hash, pwalletMain->setBurnHashes)
+  {
+    Object entry;
+    const CWalletTx &wtx = pwalletMain->mapWallet[hash];
+    CTxOut outTx = wtx.GetBurnOutTx();
+
+    if(outTx.IsNull())
+      continue;
+
+    s32int burnConfirms = wtx.GetBurnDepthInMainChain();    
+
+    //fill the entry
+    entry.push_back(Pair("burned amount", ValueFromAmount(outTx.nValue)));    
+    entry.push_back(Pair("burn confirmations", burnConfirms));
+
+    //wtx.GetBurnDepthInMainChain() must be >= BURN_MIN_CONFIRMS for the burn transaction to be mature
+    s32int mature = burnConfirms - BURN_MIN_CONFIRMS;
+
+    if(mature < 0)
+      entry.push_back(Pair("burnt coins immature, burn confirmations needed", -1 * mature));
+
+    WalletTxToJSON(wtx, entry);
+
+    //record the burnt coins
+    netBurnCoins += outTx.nValue;
+
+    //if they are mature, add to the nEffBurnCoins, else add to the immatureCoins
+    if(mature >= 0)
+      nEffBurnCoins += BurnCalcEffectiveCoins(outTx.nValue, mature);
+    else
+      immatureCoins += outTx.nValue;
+
+    ret.push_back(entry);
+  }
+
+  return ret;
+}
+
+Value getburndata(const Array &params, bool fHelp)
+{
+  if(fHelp)
+    throw runtime_error("getburndata\n"
+                        "Lists useful proof-of-burn information");
+
+  int64 netBurnCoins, nEffBurnCoins, immatureCoins;
+ 
+  Array ret = getBurnCoinBalances(netBurnCoins, nEffBurnCoins, immatureCoins);
+
+  Object entry;
+  entry.push_back(Pair("Net Burnt Coins", ValueFromAmount(netBurnCoins)));
+  entry.push_back(Pair("Effective Burnt Coins", ValueFromAmount(nEffBurnCoins)));
+  entry.push_back(Pair("Immature Burnt Coins", ValueFromAmount(immatureCoins)));
+  entry.push_back(Pair("Decayed Burnt Coins", ValueFromAmount(netBurnCoins - immatureCoins - nEffBurnCoins)));
+  ret.push_back(entry);
+
+  Object info;
+  info.push_back(Pair("General Info", ""));
+  info.push_back(Pair("nBurnBits", strprintf("%08x", pindexBest->nBurnBits)));
+  info.push_back(Pair("nEffectiveBurnCoins", strprintf("%"PRI64d, pindexBest->nEffectiveBurnCoins)));
+  info.push_back(Pair("Formatted nEffectiveBurnCoins", FormatMoney(pindexBest->nEffectiveBurnCoins)));
+                 
+  ret.push_back(info);
+
+  return ret;
+}
 
 
 

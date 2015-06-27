@@ -21,7 +21,7 @@ bool TransactionRecord::showTransaction(const CWalletTx &wtx)
 /*
  * Decompose CWallet transaction to model transaction records.
  */
-QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *wallet, const CWalletTx &wtx)
+QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *wallet, const CWalletTx &wtx, bool fBurnMint)
 {
     QList<TransactionRecord> parts;
     int64_t nTime = wtx.GetTxTime();
@@ -30,8 +30,11 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
     int64_t nNet = nCredit - nDebit;
     uint256 hash = wtx.GetHash(), hashPrev = 0;
     std::map<std::string, std::string> mapValue = wtx.mapValue;
-
-    if (nNet > 0 || wtx.IsCoinBase() || wtx.IsCoinStake())
+	if(fBurnMint)
+		parts.append(TransactionRecord(hash, nTime, TransactionRecord::BurnMint, "", -nDebit, wtx.GetValueOut()));
+	else if(wtx.IsCoinStake()) // coinstake transaction
+		parts.append(TransactionRecord(hash, nTime, TransactionRecord::StakeMint, "", -nDebit, wtx.GetValueOut()));
+    else if (nNet > 0 || wtx.IsCoinBase() || wtx.IsCoinStake())
     {
         //
         // Credit
@@ -115,27 +118,30 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
                     continue;
                 }
 
-                CTxDestination address;
-                if (ExtractDestination(txout.scriptPubKey, address))
-                {
-                    // Sent to Bitcoin Address
-                    sub.type = TransactionRecord::SendToAddress;
-                    sub.address = CBitcoinAddress(address).ToString();
-                }
-                else
-                {
-                    // Sent to IP, or other non-address transaction like OP_EVAL
-                    sub.type = TransactionRecord::SendToOther;
-                    sub.address = mapValue["to"];
-                }
+				CBitcoinAddress address;
+				CBurnAddress burnAddress;
 
-                int64_t nValue = txout.nValue;
-                /* Add fee to first output */
-                if (nTxFee > 0)
-                {
-                    nValue += nTxFee;
-                    nTxFee = 0;
-                }
+				if(ExtractAddress(txout.scriptPubKey, address))
+				{
+					if(address != burnAddress)
+						sub.type = TransactionRecord::SendToAddress; // Sent to BitCrystalSaphir Address
+					else
+						sub.type = TransactionRecord::Burned; // Burned coins
+
+						sub.address = address.ToString();
+				}else{
+					// Sent to IP, or other non-address transaction like OP_EVAL
+					sub.type = TransactionRecord::SendToOther;
+					sub.address = mapValue["to"];
+				}
+
+				int64_t nValue = txout.nValue;
+				/* Add fee to first output */
+				if (nTxFee > 0)
+				{
+					nValue += nTxFee;
+					nTxFee = 0;
+				}
                 sub.debit = -nValue;
 
                 parts.append(sub);
@@ -171,6 +177,15 @@ void TransactionRecord::updateStatus(const CWalletTx &wtx)
         idx);
     status.countsForBalance = wtx.IsTrusted() && !(wtx.GetBlocksToMaturity() > 0);
     status.depth = wtx.GetDepthInMainChain();
+	
+	 //burn transactions need a bit more information
+	if(wtx.IsBurnTx())
+	{
+		//burn transactions mature differently
+		status.burnIsMature = wtx.IsBurnTxMature();
+		status.burnDepth = wtx.GetBurnDepthInMainChain();
+	}
+
     status.cur_num_blocks = nBestHeight;
 
     if (!wtx.IsFinal())
@@ -235,6 +250,33 @@ void TransactionRecord::updateStatus(const CWalletTx &wtx)
             status.status = TransactionStatus::Confirmed;
         }
     }
+	// For generated transactions, determine maturity
+	if(type == TransactionRecord::Generated || type == TransactionRecord::StakeMint
+     || type == TransactionRecord::BurnMint)
+	{
+		int64 nCredit = wtx.GetCredit(true);
+		if(nCredit == 0)
+		{
+			status.status = TransactionStatus::Immature;
+
+		if(wtx.IsInMainChain())
+		{
+			status.matures_in = wtx.GetBlocksToMaturity();
+
+			// Check if the block was requested by anyone
+			if(GetAdjustedTime() - wtx.nTimeReceived > 2 * 60 && wtx.GetRequestCount() == 0)
+				status.status = TransactionStatus::MaturesWarning;
+		}
+		else
+		{
+			status.status = TransactionStatus::NotAccepted;
+		}
+    }
+    else
+    {
+      status.status = TransactionStatus::Mature;
+    }
+  }
 }
 
 bool TransactionRecord::statusUpdateNeeded()

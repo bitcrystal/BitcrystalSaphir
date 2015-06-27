@@ -3,6 +3,7 @@
 
 #include <QAbstractTableModel>
 #include <QStringList>
+#include "util.h"
 
 class CWallet;
 class TransactionTablePriv;

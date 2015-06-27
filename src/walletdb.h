@@ -81,6 +81,24 @@ public:
         nWalletDBUpdated++;
         return Erase(std::make_pair(std::string("tx"), hash));
     }
+	
+	//Burn transactions' hashes
+	bool ReadBurnTx(uint256 hash, CWalletTx& wtx)
+	{
+		return Read(std::make_pair(std::string("burnHash"), hash), wtx);
+	}
+
+	bool WriteBurnTx(uint256 hash, const CWalletTx& wtx)
+	{
+		nWalletDBUpdated++;
+		return Write(std::make_pair(std::string("burnHash"), hash), wtx);
+	}
+
+	bool EraseBurnTx(uint256 hash)
+	{
+		nWalletDBUpdated++;
+		return Erase(std::make_pair(std::string("burnHash"), hash));
+	}
 
     bool WriteKey(const CPubKey& vchPubKey, const CPrivKey& vchPrivKey, const CKeyMetadata &keyMeta)
     {

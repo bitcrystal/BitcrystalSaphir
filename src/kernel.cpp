@@ -324,6 +324,13 @@ bool CheckStakeKernelHash(unsigned int nBits, const CBlock& blockFrom, unsigned 
     return true;
 }
 
+bool CheckProofOfStake(const CTransaction& tx, unsigned int nBits, uint256& hashProofOfStake)
+{
+	uint256 e = hashProofOfStake;
+	uint256 f = 0;
+	return CheckProofOfStake(tx,nBits,e,f);
+}
+
 // Check kernel hash target and coinstake signature
 bool CheckProofOfStake(const CTransaction& tx, unsigned int nBits, uint256& hashProofOfStake, uint256& targetProofOfStake)
 {

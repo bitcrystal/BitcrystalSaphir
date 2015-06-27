@@ -22,6 +22,42 @@ QT_BEGIN_NAMESPACE
 class QTimer;
 QT_END_NAMESPACE
 
+class BurnCoinsBalances
+{
+public:
+  qint64 netBurnCoins;
+  qint64 nEffectiveBurnCoins;
+  qint64 nImmatureBurnCoins;
+  qint64 nDecayedBurnCoins;
+
+  BurnCoinsBalances()
+  {
+    netBurnCoins = nEffectiveBurnCoins = nImmatureBurnCoins = nDecayedBurnCoins = 0;
+  }
+
+  BurnCoinsBalances(qint64 netBurn, qint64 effBurn, qint64 immBurn)
+  {
+    netBurnCoins = netBurn;
+    nEffectiveBurnCoins = effBurn;
+    nImmatureBurnCoins = immBurn;
+    nDecayedBurnCoins = netBurnCoins - nImmatureBurnCoins - nEffectiveBurnCoins;
+  }
+
+  bool operator==(const BurnCoinsBalances &other)
+  {
+    return netBurnCoins == other.netBurnCoins &&
+    nEffectiveBurnCoins == other.nEffectiveBurnCoins &&
+    nImmatureBurnCoins == other.nImmatureBurnCoins &&
+    nDecayedBurnCoins == other.nDecayedBurnCoins;
+  }
+
+  bool operator!=(const BurnCoinsBalances &other)
+  {
+    return !(*this == other);
+  }
+
+};
+
 class SendCoinsRecipient
 {
 public:
@@ -49,6 +85,7 @@ public:
         DuplicateAddress,
         TransactionCreationFailed, // Error returned when wallet is still locked
         TransactionCommitFailed,
+		BadBurningCoins,
         Aborted
     };
 
@@ -69,6 +106,7 @@ public:
     qint64 getImmatureBalance() const;
     int getNumTransactions() const;
     EncryptionStatus getEncryptionStatus() const;
+	BurnCoinsBalances getBurnCoinBalances() const;
 
     // Check address for validity
     bool validateAddress(const QString &address);
@@ -86,7 +124,7 @@ public:
     };
 
     // Send coins to a list of recipients
-    SendCoinsReturn sendCoins(const QList<SendCoinsRecipient> &recipients, const CCoinControl *coinControl=NULL);
+    SendCoinsReturn sendCoins(const QList<SendCoinsRecipient> &recipients, const CCoinControl *coinControl=NULL,bool fBurnTx=false);
 
     // Wallet encryption
     bool setWalletEncrypted(bool encrypted, const SecureString &passphrase);
@@ -143,6 +181,7 @@ private:
     qint64 cachedImmatureBalance;
     qint64 cachedNumTransactions;
     EncryptionStatus cachedEncryptionStatus;
+	BurnCoinsBalances cachedBurnCoinsBalances;
     int cachedNumBlocks;
 
     QTimer *pollTimer;
@@ -164,7 +203,7 @@ public slots:
 
 signals:
     // Signal that balance in wallet changed
-    void balanceChanged(qint64 balance, qint64 stake, qint64 unconfirmedBalance, qint64 immatureBalance);
+    void balanceChanged(qint64 balance, qint64 stake, qint64 unconfirmedBalance, qint64 immatureBalance,BurnCoinsBalances cachedBurnCoinsBalances);
 
     // Number of transactions in wallet changed
     void numTransactionsChanged(int count);

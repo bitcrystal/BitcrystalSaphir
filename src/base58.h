@@ -245,11 +245,12 @@ public:
         return 0;
     }
 
-    bool operator==(const CBase58Data& b58) const { return CompareTo(b58) == 0; }
-    bool operator<=(const CBase58Data& b58) const { return CompareTo(b58) <= 0; }
-    bool operator>=(const CBase58Data& b58) const { return CompareTo(b58) >= 0; }
-    bool operator< (const CBase58Data& b58) const { return CompareTo(b58) <  0; }
-    bool operator> (const CBase58Data& b58) const { return CompareTo(b58) >  0; }
+	bool operator==(const CBase58Data& b58) const { return CompareTo(b58) == 0; }
+	bool operator!=(const CBase58Data& b58) const { return CompareTo(b58) != 0; }
+	bool operator<=(const CBase58Data& b58) const { return CompareTo(b58) <= 0; }
+	bool operator>=(const CBase58Data& b58) const { return CompareTo(b58) >= 0; }
+	bool operator< (const CBase58Data& b58) const { return CompareTo(b58) <  0; }
+	bool operator> (const CBase58Data& b58) const { return CompareTo(b58) >  0; }
 };
 
 /** base58-encoded addresses.
@@ -295,6 +296,25 @@ public:
     {
         return boost::apply_visitor(CBitcoinAddressVisitor(this), dest);
     }
+	
+	
+	bool SetHash160(const uint160& hash160)
+	{
+		SetData(fTestNet ? PUBKEY_ADDRESS_TEST : PUBKEY_ADDRESS, &hash160, 20);
+		return true;
+	}
+
+	void SetPubKey(const std::vector<unsigned char>& vchPubKey)
+	{
+		SetHash160(Hash160(vchPubKey));
+	}
+
+	bool SetScriptHash160(const uint160& hash160)
+	{
+		SetData(fTestNet ? SCRIPT_ADDRESS_TEST : SCRIPT_ADDRESS, &hash160, 20);
+		return true;
+	}
+
 
     bool IsValid() const
     {
@@ -344,6 +364,25 @@ public:
     {
         SetString(pszAddress);
     }
+	
+	CBitcoinAddress(uint160 hash160In)
+	{
+		SetHash160(hash160In);
+	}
+
+	CBitcoinAddress(const std::vector<unsigned char>& vchPubKey)
+	{
+		SetPubKey(vchPubKey);
+	}
+	
+	
+	uint160 GetHash160() const
+	{
+		assert(vchData.size() == 20);
+		uint160 hash160;
+		memcpy(&hash160, &vchData[0], 20);
+		return hash160;
+	}
 
     CTxDestination Get() const {
         if (!IsValid())

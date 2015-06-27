@@ -35,8 +35,14 @@
 #include <stdint.h>
 #include <inttypes.h>
 
-typedef long long  int64;
 typedef unsigned long long  uint64;
+typedef          long long  int64;
+typedef unsigned int        u32int;
+typedef          int        s32int;
+typedef unsigned short      u16int;
+typedef          short      s16int;
+typedef unsigned char       u8int;
+typedef          char       s8int;
 
 static const int64_t COIN = 100000000;
 static const int64_t CENT = 1000000;
@@ -73,6 +79,9 @@ void LogStackTrace();
   #define PRIpdx    "Ix"
   #define PRIpdu    "Iu"
   #define PRIpdd    "Id"
+  #define PRI64d  "I64d"
+  #define PRI64u  "I64u"
+  #define PRI64x  "I64x"
 #else /* C99 standard */
   #define PRIszx    "zx"
   #define PRIszu    "zu"
@@ -80,6 +89,9 @@ void LogStackTrace();
   #define PRIpdx    "tx"
   #define PRIpdu    "tu"
   #define PRIpdd    "td"
+  #define PRI64d  "lld"
+  #define PRI64u  "llu"
+  #define PRI64x  "llx"
 #endif
 
 // This is needed because the foreach macro can't get over the comma in pair<t1, t2>

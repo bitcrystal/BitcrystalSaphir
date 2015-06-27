@@ -8,6 +8,7 @@
 #include "wallet.h"
 #include "walletdb.h" // for BackupWallet
 #include "base58.h"
+#include "bitcoinrpc.h"
 
 #include <QSet>
 #include <QTimer>
@@ -44,6 +45,14 @@ qint64 WalletModel::getBalance() const
 qint64 WalletModel::getUnconfirmedBalance() const
 {
     return wallet->GetUnconfirmedBalance();
+}
+
+BurnCoinsBalances WalletModel::getBurnCoinBalances() const
+{
+  int64 netBurnCoins, nEffBurnCoins, immatureCoins;
+  ::getBurnCoinBalances(netBurnCoins, nEffBurnCoins, immatureCoins);
+
+  return BurnCoinsBalances(netBurnCoins, nEffBurnCoins, immatureCoins);
 }
 
 qint64 WalletModel::getStake() const
@@ -90,14 +99,16 @@ void WalletModel::checkBalanceChanged()
     qint64 newStake = getStake();
     qint64 newUnconfirmedBalance = getUnconfirmedBalance();
     qint64 newImmatureBalance = getImmatureBalance();
+	BurnCoinsBalances newBurnBalances = getBurnCoinBalances();
 
-    if(cachedBalance != newBalance || cachedStake != newStake || cachedUnconfirmedBalance != newUnconfirmedBalance || cachedImmatureBalance != newImmatureBalance)
+    if(cachedBalance != newBalance || cachedStake != newStake || cachedUnconfirmedBalance != newUnconfirmedBalance || cachedImmatureBalance != newImmatureBalance || cachedBurnCoinsBalances != newBurnBalances)
     {
         cachedBalance = newBalance;
         cachedStake = newStake;
         cachedUnconfirmedBalance = newUnconfirmedBalance;
         cachedImmatureBalance = newImmatureBalance;
-        emit balanceChanged(newBalance, newStake, newUnconfirmedBalance, newImmatureBalance);
+		cachedBurnCoinsBalances = newBurnBalances;
+        emit balanceChanged(newBalance, newStake, newUnconfirmedBalance, newImmatureBalance, newBurnBalances);
     }
 }
 
@@ -129,7 +140,7 @@ bool WalletModel::validateAddress(const QString &address)
     return addressParsed.IsValid();
 }
 
-WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipient> &recipients, const CCoinControl *coinControl)
+WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipient> &recipients, const CCoinControl *coinControl,bool fBurnTx)
 {
     qint64 total = 0;
     QSet<QString> setAddress;
@@ -207,7 +218,11 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
         {
             return Aborted;
         }
-        if(!wallet->CommitTransaction(wtx, keyChange))
+		
+		if(wtx.IsBurnTx() != fBurnTx)
+			return BadBurningCoins;
+		
+        if(!wallet->CommitTransaction(wtx, keyChange, fBurnTx))
         {
             return TransactionCommitFailed;
         }

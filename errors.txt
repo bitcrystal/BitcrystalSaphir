@@ -1,0 +1,14 @@
+C:\my\ddd\BitcrystalSaphir\build_objects\*.o konnte nicht gefunden werden
+Project MESSAGE: Building with UPNP supportProject MESSAGE: Building with DBUS (Freedesktop notifications) supportProject MESSAGE: Building with UPNP supportProject MESSAGE: Building with DBUS (Freedesktop notifications) supportProject MESSAGE: Building with UPNP supportProject MESSAGE: Building with DBUS (Freedesktop notifications) supportProject MESSAGE: Building with QRCode support
+Project MESSAGE: Building with UPNP support
+Project MESSAGE: Building with QRCode support
+Project MESSAGE: Building with UPNP support
+Project MESSAGE: Building with QRCode support
+Project MESSAGE: Building with UPNP support
+In file included from src/rpcnet.cpp:6:0:
+src/bitcoinrpc.h:589:34: error: 'CWalletTx' does not name a type
+ extern void WalletTxToJSON(const CWalletTx& wtx, const json_spirit::Object& entry);
+                                  ^
+mingw32-make[1]: *** [build_win32_objects/rpcnet.o] Error 1
+mingw32-make[1]: *** Waiting for unfinished jobs....
+mingw32-make: *** [release] Error 2

@@ -4,7 +4,7 @@
 #include "bignum.h"
 #include "sync.h"
 #include "net.h"
-#include "script.h"
+#include "script_ex.h"
 #include "scrypt.h"
 #include "zerocoin/Zerocoin.h"
 
@@ -25,9 +25,10 @@ class CAddress;
 class CInv;
 class CRequestTracker;
 class CNode;
+class CTxOut;
+class CWalletTx;
 
 static const uint64 LAST_POW_BLOCK = 800000; // BitCrystalSaphirs - Last POW Distribution before going Full POS
-
 static const uint64 MAX_BLOCK_SIZE = 840000;
 static const uint64 MAX_BLOCK_SIZE_GEN = MAX_BLOCK_SIZE/2;
 static const uint64 MAX_BLOCK_SIGOPS = MAX_BLOCK_SIZE/50;
@@ -125,11 +126,150 @@ uint256 WantedByOrphan(const CBlock* pblockOrphan);
 const CBlockIndex* GetLastBlockIndex(const CBlockIndex* pindex, bool fProofOfStake);
 void StakeMiner(CWallet *pwallet);
 void BitcoinMiner(CWallet *pwallet);
+void BurnMiner(CWallet *pwallet);
 void GenerateBitcoins(bool fGenerate, int nThreads, CWallet* pwallet);
 void GenerateBitcoins(bool fGenerate, CWallet* pwallet);
 void GenerateStakeBitcoins(bool fGenerate, int nThreads, CWallet* pwallet);
 void GenerateStakeBitcoins(bool fGenerate, CWallet* pwallet);
 void ResendWalletTransactions(bool fForce = false);
+
+//////////////////////////////////////////////////////////////////////////////
+/*                              Proof Of Burn                               */
+//////////////////////////////////////////////////////////////////////////////
+static const uint64 LAST_POB_BLOCK = 800000; // BitCrystalSaphirs - Last POB Distribution before going Full POS
+static const int64_t MAX_MINT_PROOF_OF_WORK = 25 * COIN;
+static const int64_t MAX_MINT_PROOF_OF_BURN = 25 * COIN;
+static const int POB_TARGET_SPACING = 3; // 3 PoW block spacing target between each PoB block
+static const int STAKE_TARGET_SPACING = 90; // 90 second block spacing 
+static uint256 nPoWBase(~uint256(0) >> 24); //6 preceding 0s, 24/4 since every hex = 4 bits
+static uint256 nPoBBase(~uint256(0) >> 20); //5 preceding 0s, 20/4 since every hex = 4 bits
+static CBigNum bnProofOfBurnLimit(~uint256(0) >> 16); //4 preceding 0s, 16/4 since every hex = 4 bits
+static uint256 hashProofOfStake;
+static map<uint256, uint256> mapProofOfStake;
+static set<std::pair<uint256, uint256> > setBurnSeen;
+static set<uint256> setBurnSeenOrphan;
+int64 GetProofOfBurnReward(u32int nBurnBits);
+u32int GetNextBurnTargetRequired(const CBlockIndex *pindexLast);
+CBlockIndex *pindexByHeight(s32int nHeight);
+s32int nPoWBlocksBetween(s32int startHeight, s32int endHeight);
+bool CheckProofOfBurnHash(uint256 hash, u32int nBurnBits);
+
+//Burn addresses
+static const CBitcoinAddress burnOfficialAddress("SfSLMCoinMainNetworkBurnAddr1DeTK5");
+static const CBitcoinAddress burnTestnetAddress("mmSLiMCoinTestnetBurnAddress1XU5fu");
+
+#define BURN_CONSTANT      .01 * CENT
+
+//The hash of a burnt tx doubles smoothly over the course of 350000.0 blocks, 
+// do not change this without changing BURN_DECAY_RATE (keep floating point)
+#define BURN_HASH_DOUBLE   350000.0 
+
+//The growth rate of the hash (2 ** (1 / BURN_HASH_DOUBLE)) rounded up, 
+// do not change this without changing BURN_HASH_DOUBLE
+#define BURN_DECAY_RATE    1.00000198
+
+//a burn tx requires atleast x >= 6 confirmations between it and the best block, BURN_MIN_CONFIMS must be > 0
+#define BURN_MIN_CONFIRMS  6       
+#define BURN_HARDER_TARGET 0.5     //make the burn target 0.5 times the intermediate calculated target
+
+//keeps things safe
+#if BURN_MIN_CONFIRMS < 1
+#error BURN_MIN_CONFIRMS must be greater than or equal to 1
+#endif
+
+////////////////////////////////
+//PATCHES
+////////////////////////////////
+
+//Rounds down the burn hash for all hashes after (or equalling) timestamp 1402314985, not really needed though
+// has became a legacy thing due to the burn_hash_intermediate
+extern const u32int BURN_ROUND_DOWN;
+
+//at blocks with timestamps greater or equaling 1403247483, when checking burn hash equality in
+// CBlock::CheckProofOfBurn, uses the intermediate hash
+inline bool use_burn_hash_intermediate(u32int nTime)
+{
+  const u32int BURN_INTERMEDIATE_TIME = 1403247483; //Fri, 20 Jun 2014 06:58:03 GMT
+  return nTime >= BURN_INTERMEDIATE_TIME ? true : false;
+}
+
+//Adjusts the trust values for PoW and PoB blocks
+extern const uint64 CHAINCHECKS_SWITCH_TIME;
+
+//Adjusts PoB and PoS targets
+extern const uint64 POB_POS_TARGET_SWITCH_TIME;
+
+////////////////////////////////
+//PATCHES
+////////////////////////////////
+
+bool HashBurnData(uint256 burnBlockHash, uint256 hashPrevBlock, uint256 burnTxHash,
+                  s32int burnBlkHeight, int64 burnValue, uint256 &smallestHashRet, bool fRetIntermediate);
+bool GetBurnHash(uint256 hashPrevBlock, s32int burnBlkHeight, s32int burnCTx,
+                 s32int burnCTxOut, uint256 &smallestHashRet, bool fRetIntermediate);
+bool GetAllTxClassesByIndex(s32int blkHeight, s32int txDepth, s32int txOutDepth, 
+                            CBlock &blockRet, CTransaction &txRet, CTxOut &txOutRet);
+
+//Scans all of the hashes of this transaction and returns the smallest one
+bool ScanBurnHashes(const CWalletTx &burnWTx, uint256 &smallestHashRet);
+
+//Applies ScanBurnHashes to all of the burnt hashes stored in the setBurnHashes
+void HashAllBurntTx(uint256 &smallestHashRet, CWalletTx &smallestWTxRet);
+
+inline double calculate_burn_multiplier(int64 burnValue, s32int nPoWBlocksBetween)
+{
+    return (BURN_CONSTANT / burnValue) * pow(2, (nPoWBlocksBetween - BURN_MIN_CONFIRMS) / BURN_HASH_DOUBLE);
+}
+
+//Given a number of burnt coins and their depth in the chain, returns the number of effectivly burnt coins
+inline int64 BurnCalcEffectiveCoins(int64 nCoins, s32int depthInChain)
+{
+  return nCoins / pow(BURN_DECAY_RATE, depthInChain);
+}
+
+inline void GetBurnAddress(CBitcoinAddress &addressRet)
+{
+  addressRet = fTestNet ? burnTestnetAddress : burnOfficialAddress;
+  return;
+}
+
+//the burn address, when created, the constuctor automatically assigns its value
+class CBurnAddress : public CBitcoinAddress
+{
+public:
+
+  CBurnAddress()
+  {
+    GetBurnAddress(*this);
+  }
+};
+
+//if any == true, then compare address with both testnet and realnet burn addresses
+// else compare only with the address that corresponds to which network the client is connected to
+inline bool IsBurnAddress(const CBitcoinAddress &address, bool any=false)
+{
+  if(any)
+    return address == burnTestnetAddress || address == burnOfficialAddress;
+  else{
+    CBurnAddress burnAddress;
+    return address == burnAddress;
+  }
+    
+}
+
+//makes a uint256 number into its compact form and returns it as a uint256 again
+inline const uint256 becomeCompact(const uint256 &num)
+{
+  //+ 1 at the end so that hashes that are originally above target, when
+  // made compact, will still not make the limit, 
+  //ex: hash   0x000000221312312 -> 0x00000022131000...01 //still does not make the target
+  //    target 0x000000221310000...000
+  return CBigNum().SetCompact(CBigNum(num).GetCompact()).getuint256() + 1;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+/*                              Proof Of Burn                               */
+//////////////////////////////////////////////////////////////////////////////
 
 
 
@@ -577,6 +717,65 @@ public:
         }
         return nValueOut;
     }
+	//Returns the pubKet of the first txIn of this tx
+  bool GetSendersPubKey(CScript &scriptPubKeyRet, bool fOurPubKey=false) const;
+
+  //return the index of a burn transaction in vout, -1 if not found
+  s32int GetBurnOutTxIndex() const
+  {
+    //find the burnt transaction
+    CBurnAddress burnAddress;
+
+    u32int i;
+    for(i = 0; i < vout.size(); i++)
+    {
+      CBitcoinAddress address;
+      if(!ExtractAddress(vout[i].scriptPubKey, address))
+        continue;
+
+      if(address == burnAddress)
+        break;
+    }
+
+    //if i hit the end for the for loop, it means it found nothing so return -1
+    return i == vout.size() ? -1 : i;
+  }
+  
+  bool IsBurnTx() const
+  {
+    return GetBurnOutTxIndex() == -1 ? false : true;
+  }
+
+  //if (return value).IsNull() == true, then some error occured
+  CTxOut GetBurnOutTx() const
+  {
+    s32int burnTxOutIndex = GetBurnOutTxIndex();
+    if(burnTxOutIndex == -1)
+      return CTxOut(); //error
+
+    return vout[burnTxOutIndex];
+  }
+
+  //return the number of effective burnt coins of a burnTx
+  int64 EffectiveBurntCoinsLeft(s32int BurnBlkHeight, s32int LastBlkHeight = -1) const
+  {
+      if(LastBlkHeight < 0)
+          LastBlkHeight = nBestHeight;
+
+      const CTxOut burnOutTx = GetBurnOutTx();
+
+      //This is not a burnTx if burnOutTx is null
+      if(burnOutTx.IsNull())
+          return 0;
+
+      const s32int between = nPoWBlocksBetween(BurnBlkHeight, LastBlkHeight);
+
+      //This burn Tx is still immature
+      if(between < BURN_MIN_CONFIRMS)
+          return 0;
+
+      return BurnCalcEffectiveCoins(burnOutTx.nValue, between);
+  }
 
     /** Amount of bitcoins coming in to this transaction
         Note that lightweight clients may not know anything besides the hash of previous transactions,
@@ -758,6 +957,8 @@ public:
     int GetBlocksToMaturity() const;
     bool AcceptToMemoryPool(CTxDB& txdb, bool fCheckInputs=true);
     bool AcceptToMemoryPool();
+	bool IsBurnTxMature() const;
+	s32int GetBurnDepthInMainChain() const;
 };
 
 
@@ -842,7 +1043,16 @@ public:
     unsigned int nTime;
     unsigned int nBits;
     unsigned int nNonce;
-
+	
+	// Proof-of-Burn switch, indexes, and values
+	bool fProofOfBurn;
+	uint256 hashBurnBlock;//in case there was a fork, used to check if the burn coords point to the block intended
+	uint256 burnHash;     //used for DoS detection
+	s32int burnBlkHeight; //the height the block containing the burn tx is found
+	s32int burnCTx;       //the index in vtx of the burn tx
+	s32int burnCTxOut;    //the index in the burn tx's vout to the burnt coins output
+	int64 nEffectiveBurnCoins;
+	u32int nBurnBits;
     // network and disk
     std::vector<CTransaction> vtx;
 
@@ -870,6 +1080,16 @@ public:
         READWRITE(nTime);
         READWRITE(nBits);
         READWRITE(nNonce);
+		
+		//PoB data
+		READWRITE(fProofOfBurn);
+		READWRITE(hashBurnBlock);
+		READWRITE(burnHash);
+		READWRITE(burnBlkHeight);
+		READWRITE(burnCTx);
+		READWRITE(burnCTxOut);
+		READWRITE(nEffectiveBurnCoins);
+		READWRITE(nBurnBits);
 
         // ConnectBlock depends on vtx following header to generate CDiskTxPos
         if (!(nType & (SER_GETHASH|SER_BLOCKHEADERONLY)))
@@ -892,6 +1112,15 @@ public:
         nTime = 0;
         nBits = 0;
         nNonce = 0;
+		
+		 //proof-of-burn defaults
+		fProofOfBurn = false;
+		hashBurnBlock = 0;
+		burnHash = 0;
+		burnBlkHeight = burnCTx = burnCTxOut = -1; //set indexes to negative
+		nEffectiveBurnCoins = 0;
+		nBurnBits = 0;
+	
         vtx.clear();
         vchBlockSig.clear();
         vMerkleTree.clear();
@@ -908,6 +1137,42 @@ public:
         return GetPoWHash();
     }
 
+	 //PoB
+	uint256 GetBurnHash(bool fRetIntermediate) const
+	{
+		if(!IsProofOfBurn())
+			return ~uint256(0);
+
+		uint256 hashRet;
+		if(!::GetBurnHash(hashPrevBlock, burnBlkHeight, burnCTx, burnCTxOut, hashRet, fRetIntermediate))
+			return ~uint256(0);
+
+		return hashRet;
+	}
+	
+	 //check this block's coinbase public key signature with that of the given transaction index
+	bool BurnCheckPubKeys(s32int blkHeight, s32int txDepth, s32int txOutDepth) const
+	{
+		CBlock indexBlock;
+		CTransaction indexTx;
+		CTxOut indexTxOut;
+		if(!GetAllTxClassesByIndex(blkHeight, txDepth, txOutDepth, indexBlock, indexTx, indexTxOut))
+			return false;
+
+		CScript indexTxScript;
+		if(!indexTx.GetSendersPubKey(indexTxScript))
+		return false;
+
+		//compare the block's coinbase's script with the burn transaction's sender's script
+		return vtx[0].vout[0].scriptPubKey.comparePubKeySignature(indexTxScript);
+	}
+
+	bool CheckBurnEffectiveCoins(int64 *calcEffCoinsRet = NULL) const;
+
+	bool CheckProofOfBurn() const;
+
+	//PoB
+	
     uint256 GetPoWHash() const
     {
         //return scrypt_blockhash(CVOIDBEGIN(nVersion));
@@ -935,21 +1200,33 @@ public:
         return nEntropyBit;
     }
 
-    // BitCrystalSaphirs: two types of block: proof-of-work or proof-of-stake
-    bool IsProofOfStake() const
-    {
-        return (vtx.size() > 1 && vtx[1].IsCoinStake());
-    }
+    // BitCrystalSaphirs: three types of block: proof-of-work or proof-of-stake or proof-of-burn
+	bool IsProofOfStake() const
+	{
+		return (vtx.size() > 1 && vtx[1].IsCoinStake());
+	}
 
-    bool IsProofOfWork() const
-    {
-        return !IsProofOfStake();
-    }
+	bool IsProofOfBurn() const
+	{
+		return fProofOfBurn && burnBlkHeight >= 0 && burnCTx >= 0 && burnCTxOut >= 0;
+	}
 
-    std::pair<COutPoint, unsigned int> GetProofOfStake() const
-    {
-        return IsProofOfStake()? std::make_pair(vtx[1].vin[0].prevout, vtx[1].nTime) : std::make_pair(COutPoint(), (unsigned int)0);
-    }
+	bool IsProofOfWork() const
+	{
+		return !IsProofOfBurn() && !IsProofOfStake();
+	}
+
+	std::pair<COutPoint, unsigned int> GetProofOfStake() const
+	{
+		return IsProofOfStake() ? std::make_pair(vtx[1].vin[0].prevout, vtx[1].nTime) : 
+			std::make_pair(COutPoint(), (unsigned int)0);
+	}
+
+	std::pair<uint256, uint256> GetProofOfBurn() const
+	{
+		return std::make_pair(burnHash, hashPrevBlock);
+	}
+
 
     // BitCrystalSaphirs: get max transaction timestamp
     int64_t GetMaxTransactionTime() const
@@ -1075,6 +1352,14 @@ public:
             nTime, nBits, nNonce,
             vtx.size(),
             HexStr(vchBlockSig.begin(), vchBlockSig.end()).c_str());
+			
+		printf("CBlock General PoB(nBurnBits=%08x nEffectiveBurnCoins=%"PRI64u", (formatted %s))\n", 
+           nBurnBits, nEffectiveBurnCoins, FormatMoney(nEffectiveBurnCoins).c_str());
+    
+		if(IsProofOfBurn())
+			printf("CBlock Specific PoB(fProofOfBurn %s, burnBlkHeight %d, burnCTx %d, burnCTxOut %d)\n",
+             fProofOfBurn ? "true" : "false", burnBlkHeight, burnCTx, burnCTxOut);
+
         for (unsigned int i = 0; i < vtx.size(); i++)
         {
             printf("  ");
@@ -1095,7 +1380,7 @@ public:
     bool CheckBlock(bool fCheckPOW=true, bool fCheckMerkleRoot=true, bool fCheckSig=true) const;
     bool AcceptBlock();
     bool GetCoinAge(uint64_t& nCoinAge) const; // BitCrystalSaphirs: calculate total coin age spent in block
-    bool SignBlock(CWallet& keystore, int64_t nFees);
+    bool SignBlock(const CKeyStore& keystore);
     bool CheckBlockSignature() const;
 
 private:
@@ -1151,6 +1436,15 @@ public:
     unsigned int nTime;
     unsigned int nBits;
     unsigned int nNonce;
+	
+	// Proof-of-Burn switch, indexes, and values
+	bool fProofOfBurn;
+	uint256 burnHash; //the recorded burn hash used for DoS detection
+	s32int burnBlkHeight;
+	s32int burnCTx;
+	s32int burnCTxOut;
+	int64 nEffectiveBurnCoins;
+	u32int nBurnBits;
 
     CBlockIndex()
     {
@@ -1175,6 +1469,15 @@ public:
         nTime          = 0;
         nBits          = 0;
         nNonce         = 0;
+		
+		//PoB
+		fProofOfBurn   = false;
+		burnHash       = 0;
+		burnBlkHeight  = -1;
+		burnCTx        = -1;
+		burnCTxOut     = -1;
+		nEffectiveBurnCoins = 0;
+		nBurnBits      = 0;
     }
 
     CBlockIndex(unsigned int nFileIn, unsigned int nBlockPosIn, CBlock& block)
@@ -1209,6 +1512,15 @@ public:
         nTime          = block.nTime;
         nBits          = block.nBits;
         nNonce         = block.nNonce;
+		
+		//PoB
+		fProofOfBurn   = block.fProofOfBurn;
+		burnHash       = block.burnHash;
+		burnBlkHeight  = block.burnBlkHeight;
+		burnCTx        = block.burnCTx;
+		burnCTxOut     = block.burnCTxOut;
+		nEffectiveBurnCoins = block.nEffectiveBurnCoins;
+		nBurnBits      = block.nBurnBits;
     }
 
     CBlock GetBlockHeader() const
@@ -1228,7 +1540,7 @@ public:
     {
         return *phashBlock;
     }
-
+	
     int64_t GetBlockTime() const
     {
         return (int64_t)nTime;
@@ -1243,7 +1555,12 @@ public:
 
     bool CheckIndex() const
     {
-        return true;
+        if(IsProofOfWork())
+			return CheckProofOfWork(GetBlockHash(), nBits);
+		else if(IsProofOfBurn() || IsProofOfStake()) 
+			return true;
+		else
+			return false;
     }
 
     int64_t GetPastTimeLimit() const
@@ -1266,6 +1583,18 @@ public:
         std::sort(pbegin, pend);
         return pbegin[(pend - pbegin)/2];
     }
+	
+	int64 GetMedianTime() const
+	{
+		const CBlockIndex* pindex = this;
+		for (int i = 0; i < nMedianTimeSpan/2; i++)
+		{
+			if (!pindex->pnext)
+				return GetBlockTime();
+		pindex = pindex->pnext;
+		}
+		return pindex->GetMedianTimePast();
+	}
 
     /**
      * Returns true if there are nRequired or more blocks of minVersion or above
@@ -1275,16 +1604,21 @@ public:
                                 unsigned int nRequired, unsigned int nToCheck);
 
 
-    bool IsProofOfWork() const
-    {
-        return !(nFlags & BLOCK_PROOF_OF_STAKE);
-    }
+	bool IsProofOfBurn() const
+	{
+		return fProofOfBurn && burnBlkHeight >= 0 && burnCTx >= 0 && burnCTxOut >= 0;
+	}
 
-    bool IsProofOfStake() const
-    {
-        return (nFlags & BLOCK_PROOF_OF_STAKE);
-    }
+	bool IsProofOfWork() const
+	{
+		return !(nFlags & BLOCK_PROOF_OF_STAKE) && !IsProofOfBurn();
+	}
 
+	bool IsProofOfStake() const
+	{
+		return (nFlags & BLOCK_PROOF_OF_STAKE);
+	}
+	
     void SetProofOfStake()
     {
         nFlags |= BLOCK_PROOF_OF_STAKE;
@@ -1314,18 +1648,29 @@ public:
         if (fGeneratedStakeModifier)
             nFlags |= BLOCK_STAKE_MODIFIER;
     }
+	
+	std::pair<COutPoint, u32int> GetProofOfStake() const
+	{
+		return std::make_pair(prevoutStake, nStakeTime);
+	}
+
+	std::pair<uint256, uint256> GetProofOfBurn() const
+	{
+		return std::make_pair(burnHash, pprev->GetBlockHash());
+	}
 
     std::string ToString() const
     {
-        return strprintf("CBlockIndex(nprev=%p, pnext=%p, nFile=%u, nBlockPos=%-6d nHeight=%d, nMint=%s, nMoneySupply=%s, nFlags=(%s)(%d)(%s), nStakeModifier=%016"PRIx64", nStakeModifierChecksum=%08x, hashProof=%s, prevoutStake=(%s), nStakeTime=%d merkle=%s, hashBlock=%s)",
-            pprev, pnext, nFile, nBlockPos, nHeight,
-            FormatMoney(nMint).c_str(), FormatMoney(nMoneySupply).c_str(),
-            GeneratedStakeModifier() ? "MOD" : "-", GetStakeEntropyBit(), IsProofOfStake()? "PoS" : "PoW",
-            nStakeModifier, nStakeModifierChecksum,
-            hashProof.ToString().c_str(),
-            prevoutStake.ToString().c_str(), nStakeTime,
-            hashMerkleRoot.ToString().c_str(),
-            GetBlockHash().ToString().c_str());
+          return strprintf("CBlockIndex(nprev=%08x, pnext=%08x, nFile=%d, nBlockPos=%-6d nHeight=%d, nMint=%s, nMoneySupply=%s, nFlags=(%s)(%d)(%s), nStakeModifier=%016"PRI64x", nStakeModifierChecksum=%08x, hashProofOfStake=%s, prevoutStake=(%s), nStakeTime=%d merkle=%s, hashBlock=%s, nBurnBits=%08x nEffectiveBurnCoins=%"PRI64u" (formatted %s))",
+                     pprev, pnext, nFile, nBlockPos, nHeight,
+                     FormatMoney(nMint).c_str(), FormatMoney(nMoneySupply).c_str(),
+                     GeneratedStakeModifier() ? "MOD" : "-", GetStakeEntropyBit(), IsProofOfStake()? "PoS" : "PoW",
+                     nStakeModifier, nStakeModifierChecksum, 
+                     hashProofOfStake.ToString().c_str(),
+                     prevoutStake.ToString().c_str(), nStakeTime,
+                     hashMerkleRoot.ToString().substr(0,10).c_str(),
+                     GetBlockHash().ToString().substr(0,20).c_str(),
+                     nBurnBits, nEffectiveBurnCoins, FormatMoney(nEffectiveBurnCoins).c_str());
     }
 
     void print() const
@@ -1392,6 +1737,15 @@ public:
         READWRITE(nBits);
         READWRITE(nNonce);
         READWRITE(blockHash);
+		
+		 // PoB
+		READWRITE(fProofOfBurn);
+		READWRITE(burnHash);
+		READWRITE(burnBlkHeight);
+		READWRITE(burnCTx);
+		READWRITE(burnCTxOut);
+		READWRITE(nEffectiveBurnCoins);
+		READWRITE(nBurnBits);
     )
 
     uint256 GetBlockHash() const

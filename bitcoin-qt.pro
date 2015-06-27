@@ -7,6 +7,7 @@ DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE
 CONFIG += no_include_pwd
 CONFIG += thread
 CONFIG += static
+CONFIG += warn_off
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 lessThan(QT_MAJOR_VERSION, 5): CONFIG += static
 QMAKE_CXXFLAGS = -fpermissive
@@ -212,6 +213,7 @@ HEADERS += src/custom_variables.h \
     src/txdb.h \
     src/walletdb.h \
     src/script.h \
+	src/script_ex.h \
     src/init.h \
     src/irc.h \
     src/mruset.h \
@@ -283,6 +285,7 @@ SOURCES += src/convert_functions.cpp \
     src/netbase.cpp \
     src/key.cpp \
     src/script.cpp \
+	src/script_ex.cpp \
     src/main.cpp \
     src/miner.cpp \
     src/init.cpp \

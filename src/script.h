@@ -208,8 +208,6 @@ enum opcodetype
 
 const char* GetOpName(opcodetype opcode);
 
-
-
 inline std::string ValueString(const std::vector<unsigned char>& vch)
 {
     if (vch.size() <= 4)
@@ -514,6 +512,8 @@ public:
                 ++nFound;
         return nFound;
     }
+	
+	bool comparePubKeySignature(const CScript &scriptPubKey) const;
 
     // Pre-version-0.6, Bitcoin always counted CHECKMULTISIGs
     // as 20 sigops. With pay-to-script-hash, that changed:
@@ -594,11 +594,11 @@ public:
 
 
 bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& script, const CTransaction& txTo, unsigned int nIn, int nHashType);
-bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, std::vector<std::vector<unsigned char> >& vSolutionsRet);
 int ScriptSigArgsExpected(txnouttype t, const std::vector<std::vector<unsigned char> >& vSolutions);
 bool IsStandard(const CScript& scriptPubKey, txnouttype& whichType);
 bool IsMine(const CKeyStore& keystore, const CScript& scriptPubKey);
 bool IsMine(const CKeyStore& keystore, const CTxDestination &dest);
+bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, std::vector<std::vector<unsigned char> >& vSolutionsRet);
 void ExtractAffectedKeys(const CKeyStore &keystore, const CScript& scriptPubKey, std::vector<CKeyID> &vKeys);
 bool ExtractDestination(const CScript& scriptPubKey, CTxDestination& addressRet);
 bool ExtractDestinations(const CScript& scriptPubKey, txnouttype& typeRet, std::vector<CTxDestination>& addressRet, int& nRequiredRet);

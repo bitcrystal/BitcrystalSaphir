@@ -128,7 +128,7 @@ OverviewPage::~OverviewPage()
     delete ui;
 }
 
-void OverviewPage::setBalance(qint64 balance, qint64 stake, qint64 unconfirmedBalance, qint64 immatureBalance)
+void OverviewPage::setBalance(qint64 balance, qint64 stake, qint64 unconfirmedBalance, qint64 immatureBalance, BurnCoinsBalances burnBalances)
 {
     int unit = model->getOptionsModel()->getDisplayUnit();
     currentBalance = balance;
@@ -146,6 +146,17 @@ void OverviewPage::setBalance(qint64 balance, qint64 stake, qint64 unconfirmedBa
     bool showImmature = immatureBalance != 0;
     ui->labelImmature->setVisible(showImmature);
     ui->labelImmatureText->setVisible(showImmature);
+	
+	//burn information
+	currentNetBurnCoins = burnBalances.netBurnCoins;
+	currentEffectiveBurnCoins = burnBalances.nEffectiveBurnCoins;
+	currentImmatureBurnCoins = burnBalances.nImmatureBurnCoins;
+	currentDecayedBurnCoins = burnBalances.nDecayedBurnCoins;
+
+	ui->labelNetBurnCoins->setText(BitcoinUnits::formatWithUnit(unit, burnBalances.netBurnCoins));
+	ui->labelEffBurnCoins->setText(BitcoinUnits::formatWithUnit(unit, burnBalances.nEffectiveBurnCoins));
+	ui->labelImmBurnCoins->setText(BitcoinUnits::formatWithUnit(unit, burnBalances.nImmatureBurnCoins));
+	ui->labelDecayBurnCoins->setText(BitcoinUnits::formatWithUnit(unit, burnBalances.nDecayedBurnCoins));
 }
 
 void OverviewPage::setModel(WalletModel *model)
@@ -166,8 +177,8 @@ void OverviewPage::setModel(WalletModel *model)
         ui->listTransactions->setModelColumn(TransactionTableModel::ToAddress);
 
         // Keep up to date with wallet
-        setBalance(model->getBalance(), model->getStake(), model->getUnconfirmedBalance(), model->getImmatureBalance());
-        connect(model, SIGNAL(balanceChanged(qint64, qint64, qint64, qint64)), this, SLOT(setBalance(qint64, qint64, qint64, qint64)));
+        setBalance(model->getBalance(), model->getStake(), model->getUnconfirmedBalance(), model->getImmatureBalance(),model->getBurnCoinBalances());
+        connect(model, SIGNAL(balanceChanged(qint64, qint64, qint64, qint64, BurnCoinsBalances)), this, SLOT(setBalance(qint64, qint64, qint64, qint64, BurnCoinsBalances)));
 
         connect(model->getOptionsModel(), SIGNAL(displayUnitChanged(int)), this, SLOT(updateDisplayUnit()));
     }
@@ -181,7 +192,7 @@ void OverviewPage::updateDisplayUnit()
     if(model && model->getOptionsModel())
     {
         if(currentBalance != -1)
-            setBalance(currentBalance, model->getStake(), currentUnconfirmedBalance, currentImmatureBalance);
+            setBalance(currentBalance, model->getStake(), currentUnconfirmedBalance, currentImmatureBalance, BurnCoinsBalances(currentNetBurnCoins, currentEffectiveBurnCoins, currentImmatureBurnCoins));
 
         // Update txdelegate->unit with the current unit
         txdelegate->unit = model->getOptionsModel()->getDisplayUnit();

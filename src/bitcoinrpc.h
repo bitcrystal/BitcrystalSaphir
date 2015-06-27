@@ -586,6 +586,7 @@ extern double GetPoSKernelPS();
 extern std::string HexBits(unsigned int nBits);
 extern std::string HelpRequiringPassphrase();
 extern void EnsureWalletIsUnlocked();
+extern void WalletTxToJSON(const CWalletTx& wtx, const json_spirit::Object& entry);
 
 //
 // Utilities: convert hex-encoded Values
@@ -731,4 +732,8 @@ extern json_spirit::Value getbalancefrommultisigaddress_multisigex(const json_sp
 extern json_spirit::Value getbalancefromtxids_multisigex(const json_spirit::Array& params, bool fHelp); // in rpcdump.cpp
 extern json_spirit::Value getsendedtxidsfrommultisigaddressex_multisigex(const json_spirit::Array& params, bool fHelp); // in rpcdump.cpp
 extern json_spirit::Value decodetxidshash(const json_spirit:: Array& params, bool fHelp);
+//This was made in a separate function for it to be used in the GUI walletmodel.cpp
+extern json_spirit::Array getBurnCoinBalances(long long &netBurnCoins, long long &nEffBurnCoins, 
+                                       long long &immatureCoins);
+									   
 #endif

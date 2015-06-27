@@ -119,6 +119,9 @@ public:
 
     std::map<uint256, CWalletTx> mapWallet;
     int64_t nOrderPosNext;
+	
+	std::set<uint256> setBurnHashes;
+  
     std::map<uint256, int> mapRequestCount;
 
     std::map<CTxDestination, std::string> mapAddressBook;
@@ -173,7 +176,7 @@ public:
     TxItems OrderedTxItems(std::list<CAccountingEntry>& acentries, std::string strAccount = "");
 
     void MarkDirty();
-    bool AddToWallet(const CWalletTx& wtxIn);
+    bool AddToWallet(const CWalletTx& wtxIn, bool fBurnTx=false);
     bool AddToWalletIfInvolvingMe(const CTransaction& tx, const CBlock* pblock, bool fUpdate = false, bool fFindBlock = false);
     bool EraseFromWallet(uint256 hash);
     void WalletUpdateSpent(const CTransaction& prevout, bool fBlock = false);
@@ -188,13 +191,13 @@ public:
     int64_t GetNewMint() const;
     bool CreateTransaction(const std::vector<std::pair<CScript, int64_t> >& vecSend, CWalletTx& wtxNew, CReserveKey& reservekey, int64_t& nFeeRet, const CCoinControl *coinControl=NULL);
     bool CreateTransaction(CScript scriptPubKey, int64_t nValue, CWalletTx& wtxNew, CReserveKey& reservekey, int64_t& nFeeRet, const CCoinControl *coinControl=NULL);
-    bool CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey);
+    bool CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey,bool fBurnTx=false);
 
     bool GetStakeWeight(const CKeyStore& keystore, uint64_t& nMinWeight, uint64_t& nMaxWeight, uint64_t& nWeight);
     bool CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int64_t nSearchInterval, int64_t nFees, CTransaction& txNew, CKey& key);
 
-    std::string SendMoney(CScript scriptPubKey, int64_t nValue, CWalletTx& wtxNew, bool fAskFee=false);
-    std::string SendMoneyToDestination(const CTxDestination &address, int64_t nValue, CWalletTx& wtxNew, bool fAskFee=false);
+    std::string SendMoney(CScript scriptPubKey, int64_t nValue, CWalletTx& wtxNew, bool fAskFee=false,bool fBurnTx=false);
+    std::string SendMoneyToDestination(const CTxDestination &address, int64_t nValue, CWalletTx& wtxNew, bool fAskFee=false,bool fBurnTx=false);
 
     bool NewKeyPool();
     bool TopUpKeyPool(unsigned int nSize = 0);
@@ -348,6 +351,7 @@ public:
 
     void ReturnKey();
     bool GetReservedKey(CPubKey &pubkey);
+	std::vector<unsigned char> GetReservedKey();
     void KeepKey();
 };
 
@@ -694,7 +698,7 @@ public:
         return true;
     }
 
-    bool WriteToDisk();
+    bool WriteToDisk(bool fBurnTx = false);
 
     int64_t GetTxTime() const;
     int GetRequestCount() const;
@@ -706,6 +710,20 @@ public:
 
     void RelayWalletTransaction(CTxDB& txdb);
     void RelayWalletTransaction();
+	
+	
+	void SetBurnTxCoords(s32int &blkHeightRet, s32int &txIndexRet, s32int &outTxIndexRet) const
+	{
+		std::map<uint256, CBlockIndex*>::iterator it = mapBlockIndex.find(hashBlock);
+		if(it == mapBlockIndex.end())
+			blkHeightRet = -1;
+		else
+			blkHeightRet = it->second->nHeight;
+
+		txIndexRet = nIndex;
+		outTxIndexRet = GetBurnOutTxIndex();
+		return;
+	}
 };
 
 

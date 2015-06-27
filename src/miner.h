@@ -13,7 +13,7 @@
 
 
 /* Generate a new block, without valid proof-of-work */
-CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake=false, int64_t* pFees = 0);
+CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake=false, int64_t* pFees = NULL, CWalletTx *burnWalletTx = NULL);
 
 /** Modify the extranonce in a block */
 void IncrementExtraNonce(CBlock* pblock, CBlockIndex* pindexPrev, unsigned int& nExtraNonce);

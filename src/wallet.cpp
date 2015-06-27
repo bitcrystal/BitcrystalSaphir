@@ -396,13 +396,18 @@ void CWallet::MarkDirty()
     }
 }
 
-bool CWallet::AddToWallet(const CWalletTx& wtxIn)
+bool CWallet::AddToWallet(const CWalletTx& wtxIn, bool fBurnTx)
 {
     uint256 hash = wtxIn.GetHash();
     {
         LOCK(cs_wallet);
         // Inserts only if not already there, returns tx inserted or tx found
         pair<map<uint256, CWalletTx>::iterator, bool> ret = mapWallet.insert(make_pair(hash, wtxIn));
+		
+		 //if it is a burn tx, add it to the wallet's its map
+		if(fBurnTx)
+			setBurnHashes.insert(hash);
+
         CWalletTx& wtx = (*ret.first).second;
         wtx.BindWallet(this);
         bool fInsertedNew = ret.second;
@@ -486,7 +491,7 @@ bool CWallet::AddToWallet(const CWalletTx& wtxIn)
 
         // Write to disk
         if (fInsertedNew || fUpdated)
-            if (!wtx.WriteToDisk())
+            if (!wtx.WriteToDisk(fBurnTx))
                 return false;
 #ifndef QT_GUI
         // If default receiving address gets used, replace it with a new one
@@ -812,9 +817,14 @@ void CWalletTx::AddSupportingTransactions(CTxDB& txdb)
     reverse(vtxPrev.begin(), vtxPrev.end());
 }
 
-bool CWalletTx::WriteToDisk()
+bool CWalletTx::WriteToDisk(bool fBurnTx = false)
 {
+  //if it is not a burn transaction
+  if(!fBurnTx)
     return CWalletDB(pwallet->strWalletFile).WriteTx(GetHash(), *this);
+  else //if it is a burn transaction
+    return CWalletDB(pwallet->strWalletFile).WriteTx(GetHash(), *this) && 
+      CWalletDB(pwallet->strWalletFile).WriteBurnTx(GetHash(), *this);
 }
 
 // Scan the block chain (starting in pindexStart) for transactions
@@ -1746,10 +1756,15 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
 
 
 // Call after CreateTransaction unless you want to abort
-bool CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey)
+bool CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey, bool fBurnTx)
 {
     {
         LOCK2(cs_main, cs_wallet);
+		
+		//CommitTransaction will not let a burn transaction not pass if they do not match
+		if(wtxNew.IsBurnTx() != fBurnTx)
+			return false;
+
         printf("CommitTransaction:\n%s", wtxNew.ToString().c_str());
         {
             // This is only to keep the database open to defeat the auto-flush for the
@@ -1762,7 +1777,7 @@ bool CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey)
 
             // Add tx to wallet, because if it has change it's also ours,
             // otherwise just for transaction history.
-            AddToWallet(wtxNew);
+            AddToWallet(wtxNew,fBurnTx);
 
             // Mark old coins as spent
             set<CWalletTx*> setCoins;
@@ -1797,7 +1812,7 @@ bool CWallet::CommitTransaction(CWalletTx& wtxNew, CReserveKey& reservekey)
 
 
 
-string CWallet::SendMoney(CScript scriptPubKey, int64_t nValue, CWalletTx& wtxNew, bool fAskFee)
+string CWallet::SendMoney(CScript scriptPubKey, int64_t nValue, CWalletTx& wtxNew, bool fAskFee, bool fBurnTx)
 {
     CReserveKey reservekey(this);
     int64_t nFeeRequired;
@@ -1828,7 +1843,7 @@ string CWallet::SendMoney(CScript scriptPubKey, int64_t nValue, CWalletTx& wtxNe
     if (fAskFee && !uiInterface.ThreadSafeAskFee(nFeeRequired, _("Sending...")))
         return "ABORTED";
 
-    if (!CommitTransaction(wtxNew, reservekey))
+    if (!CommitTransaction(wtxNew, reservekey, fBurnTx))
         return _("Error: The transaction was rejected.  This might happen if some of the coins in your wallet were already spent, such as if you used a copy of wallet.dat and coins were spent in the copy but not marked as spent here.");
 
     return "";
@@ -1836,7 +1851,7 @@ string CWallet::SendMoney(CScript scriptPubKey, int64_t nValue, CWalletTx& wtxNe
 
 
 
-string CWallet::SendMoneyToDestination(const CTxDestination& address, int64_t nValue, CWalletTx& wtxNew, bool fAskFee)
+string CWallet::SendMoneyToDestination(const CTxDestination& address, int64_t nValue, CWalletTx& wtxNew, bool fAskFee, bool fBurnTx)
 {
     // Check amount
     if (nValue <= 0)
@@ -1848,7 +1863,7 @@ string CWallet::SendMoneyToDestination(const CTxDestination& address, int64_t nV
     CScript scriptPubKey;
     scriptPubKey.SetDestination(address);
 
-    return SendMoney(scriptPubKey, nValue, wtxNew, fAskFee);
+    return SendMoney(scriptPubKey, nValue, wtxNew, fAskFee, fBurnTx);
 }
 
 
@@ -2326,6 +2341,17 @@ bool CReserveKey::GetReservedKey(CPubKey& pubkey)
     assert(vchPubKey.IsValid());
     pubkey = vchPubKey;
     return true;
+}
+
+std::vector<unsigned char> CReserveKey::GetReservedKey()
+{
+  CPubKey key;
+  bool d = GetReservedKey(key);
+  while(!d)
+  {
+	d = GetReservedKey(key);
+  }
+  return key.Raw();
 }
 
 void CReserveKey::KeepKey()
