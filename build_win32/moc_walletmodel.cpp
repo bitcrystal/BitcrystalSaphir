@@ -30,25 +30,26 @@ static const uint qt_meta_data_WalletModel[] = {
        5,       // signalCount
 
  // signals: signature, parameters, type, tag, flags
-      62,   13,   12,   12, 0x05,
-     112,  106,   12,   12, 0x05,
-     147,  140,   12,   12, 0x05,
-     176,   12,   12,   12, 0x05,
-     212,  192,   12,   12, 0x05,
+      86,   13,   12,   12, 0x05,
+     154,  148,   12,   12, 0x05,
+     189,  182,   12,   12, 0x05,
+     218,   12,   12,   12, 0x05,
+     254,  234,   12,   12, 0x05,
 
  // slots: signature, parameters, type, tag, flags
-     240,   12,   12,   12, 0x0a,
-     267,  255,   12,   12, 0x0a,
-     326,  298,   12,   12, 0x0a,
-     370,   12,   12,   12, 0x0a,
+     282,   12,   12,   12, 0x0a,
+     309,  297,   12,   12, 0x0a,
+     368,  340,   12,   12, 0x0a,
+     412,   12,   12,   12, 0x0a,
 
        0        // eod
 };
 
 static const char qt_meta_stringdata_WalletModel[] = {
     "WalletModel\0\0"
-    "balance,stake,unconfirmedBalance,immatureBalance\0"
-    "balanceChanged(qint64,qint64,qint64,qint64)\0"
+    "balance,stake,unconfirmedBalance,immatureBalance,cachedBurnCoinsBalanc"
+    "es\0"
+    "balanceChanged(qint64,qint64,qint64,qint64,BurnCoinsBalances)\0"
     "count\0numTransactionsChanged(int)\0"
     "status\0encryptionStatusChanged(int)\0"
     "requireUnlock()\0title,message,modal\0"
@@ -65,7 +66,7 @@ void WalletModel::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id,
         Q_ASSERT(staticMetaObject.cast(_o));
         WalletModel *_t = static_cast<WalletModel *>(_o);
         switch (_id) {
-        case 0: _t->balanceChanged((*reinterpret_cast< qint64(*)>(_a[1])),(*reinterpret_cast< qint64(*)>(_a[2])),(*reinterpret_cast< qint64(*)>(_a[3])),(*reinterpret_cast< qint64(*)>(_a[4]))); break;
+        case 0: _t->balanceChanged((*reinterpret_cast< qint64(*)>(_a[1])),(*reinterpret_cast< qint64(*)>(_a[2])),(*reinterpret_cast< qint64(*)>(_a[3])),(*reinterpret_cast< qint64(*)>(_a[4])),(*reinterpret_cast< BurnCoinsBalances(*)>(_a[5]))); break;
         case 1: _t->numTransactionsChanged((*reinterpret_cast< int(*)>(_a[1]))); break;
         case 2: _t->encryptionStatusChanged((*reinterpret_cast< int(*)>(_a[1]))); break;
         case 3: _t->requireUnlock(); break;
@@ -119,9 +120,9 @@ int WalletModel::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
 }
 
 // SIGNAL 0
-void WalletModel::balanceChanged(qint64 _t1, qint64 _t2, qint64 _t3, qint64 _t4)
+void WalletModel::balanceChanged(qint64 _t1, qint64 _t2, qint64 _t3, qint64 _t4, BurnCoinsBalances _t5)
 {
-    void *_a[] = { 0, const_cast<void*>(reinterpret_cast<const void*>(&_t1)), const_cast<void*>(reinterpret_cast<const void*>(&_t2)), const_cast<void*>(reinterpret_cast<const void*>(&_t3)), const_cast<void*>(reinterpret_cast<const void*>(&_t4)) };
+    void *_a[] = { 0, const_cast<void*>(reinterpret_cast<const void*>(&_t1)), const_cast<void*>(reinterpret_cast<const void*>(&_t2)), const_cast<void*>(reinterpret_cast<const void*>(&_t3)), const_cast<void*>(reinterpret_cast<const void*>(&_t4)), const_cast<void*>(reinterpret_cast<const void*>(&_t5)) };
     QMetaObject::activate(this, &staticMetaObject, 0, _a);
 }
 

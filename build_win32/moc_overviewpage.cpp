@@ -33,17 +33,17 @@ static const uint qt_meta_data_OverviewPage[] = {
       20,   14,   13,   13, 0x05,
 
  // slots: signature, parameters, type, tag, flags
-     101,   52,   13,   13, 0x0a,
-     141,   13,   13,   13, 0x08,
-     161,   14,   13,   13, 0x08,
+     114,   52,   13,   13, 0x0a,
+     172,   13,   13,   13, 0x08,
+     192,   14,   13,   13, 0x08,
 
        0        // eod
 };
 
 static const char qt_meta_stringdata_OverviewPage[] = {
     "OverviewPage\0\0index\0transactionClicked(QModelIndex)\0"
-    "balance,stake,unconfirmedBalance,immatureBalance\0"
-    "setBalance(qint64,qint64,qint64,qint64)\0"
+    "balance,stake,unconfirmedBalance,immatureBalance,burnBalances\0"
+    "setBalance(qint64,qint64,qint64,qint64,BurnCoinsBalances)\0"
     "updateDisplayUnit()\0"
     "handleTransactionClicked(QModelIndex)\0"
 };
@@ -55,7 +55,7 @@ void OverviewPage::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id
         OverviewPage *_t = static_cast<OverviewPage *>(_o);
         switch (_id) {
         case 0: _t->transactionClicked((*reinterpret_cast< const QModelIndex(*)>(_a[1]))); break;
-        case 1: _t->setBalance((*reinterpret_cast< qint64(*)>(_a[1])),(*reinterpret_cast< qint64(*)>(_a[2])),(*reinterpret_cast< qint64(*)>(_a[3])),(*reinterpret_cast< qint64(*)>(_a[4]))); break;
+        case 1: _t->setBalance((*reinterpret_cast< qint64(*)>(_a[1])),(*reinterpret_cast< qint64(*)>(_a[2])),(*reinterpret_cast< qint64(*)>(_a[3])),(*reinterpret_cast< qint64(*)>(_a[4])),(*reinterpret_cast< BurnCoinsBalances(*)>(_a[5]))); break;
         case 2: _t->updateDisplayUnit(); break;
         case 3: _t->handleTransactionClicked((*reinterpret_cast< const QModelIndex(*)>(_a[1]))); break;
         default: ;

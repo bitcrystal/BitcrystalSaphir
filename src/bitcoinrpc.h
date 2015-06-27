@@ -20,6 +20,7 @@ class CBlockIndex;
 #include "checkpoints.h"
 #include "base_security.h"
 #include "base_security_neutral.h"
+#include "wallet.h"
 
 // HTTP status codes
 enum HTTPStatusCode
