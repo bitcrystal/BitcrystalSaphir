@@ -5,15 +5,20 @@
 
 /* Return positive answer if transaction should be shown in list.
  */
-bool TransactionRecord::showTransaction(const CWalletTx &wtx)
+bool TransactionRecord::showTransaction(const CWalletTx &wtx, bool * read = NULL, CBlockIndex * pindex = NULL)
 {
+	if(read!=NULL&&*read)
+	{
+		*read = wtx.GetDepthInMainChain(pindex) > 0;
+	}
     if (wtx.IsCoinBase())
     {
         // Ensures we show generated coins / mined transactions at depth 1
-        if (!wtx.IsInMainChain())
-        {
-            return false;
-        }
+		if (!wtx.IsInMainChain())
+		{
+			return false;
+		}
+		
     }
     return true;
 }

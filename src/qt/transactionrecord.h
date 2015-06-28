@@ -107,7 +107,7 @@ public:
 
     /** Decompose CWallet transaction to model transaction records.
      */
-    static bool showTransaction(const CWalletTx &wtx);
+    static bool showTransaction(const CWalletTx &wtx,bool * read = NULL, CBlockIndex * pindex = NULL);
     static QList<TransactionRecord> decomposeTransaction(const CWallet *wallet, const CWalletTx &wtx,bool fBurnMint=false);
 
     /** @name Immutable transaction attributes
