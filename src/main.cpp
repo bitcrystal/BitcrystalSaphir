@@ -81,7 +81,41 @@ int64_t nReserveBalance = 0;
 int64_t nMinimumInputValue = 0;
 
 extern enum Checkpoints::CPMode CheckpointsMode;
+const u32int BURN_ROUND_DOWN = 1402314985; 
 
+bool GetAllTxClassesByIndex(s32int blkHeight, s32int txDepth, s32int txOutDepth, 
+                            CBlock &blockRet, CTransaction &txRet, CTxOut &txOutRet)
+{
+  if(blkHeight < 0 || txDepth < 0 || txOutDepth < 0)
+    return false;
+
+  //Get the block index by burnBlkHeight
+  const CBlockIndex *pindex = pindexByHeight(blkHeight);
+
+  if(!pindex || !pindex->pprev)
+    return false;
+
+  CBlock block;
+  //Read the block
+  if(!block.ReadFromDisk(pindex))
+    return false;
+
+  if(txDepth >= block.vtx.size())
+    return false;
+
+  CTransaction transaction = block.vtx[txDepth];
+
+  if(txOutDepth >= transaction.vout.size())
+    return false;
+
+  //we may now set the return values if nothing failed
+  blockRet = block;
+  txRet = transaction;
+  txOutRet = transaction.vout[txOutDepth];
+  
+  //sucess!
+  return true;
+}
 //////////////////////////////////////////////////////////////////////////////
 //
 // dispatching functions
@@ -3017,6 +3051,8 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
 
 bool CBlock::SignBlock(const CKeyStore &keystore)
 {
+  if(isSigned)
+	return true;
   vector<valtype> vSolutions;
   txnouttype whichType;
   const CTxOut &txout = IsProofOfStake() ? vtx[1].vout[1] : vtx[0].vout[0];
@@ -3032,9 +3068,75 @@ bool CBlock::SignBlock(const CKeyStore &keystore)
       return false;
     if(key.GetPubKey() != vchPubKey)
       return false;
-    return key.Sign(GetHash(), vchBlockSig);
+    isSigned = key.Sign(GetHash(), vchBlockSig);
+	return isSigned;
   }
   return false;
+}
+
+bool CBlock::SignTransaction(CTransaction & transaction, CKey & cKey)
+{
+	if(transactionSigned)
+		return true;
+	CPubKey cPubKey = cKey.GetPubKey(); 
+	return this->SignTransaction(transaction, cPubKey);
+}
+
+bool CBlock::SignTransaction(CKeyStore & keystore, CTransaction & transaction, valtype & vchPubKey)
+{
+	if(transactionSigned)
+		return true;
+	CKey key;
+	if (!keystore.GetKey(Hash160(vchPubKey), key))
+    {
+        if (fDebug && GetBoolArg("-printcoinstake"))
+            printf("CBlock : failed to get key!");
+            return false;
+    }
+	transactionSigned = this->SignTransaction(transaction, key);
+	return transactionSigned;
+}
+
+bool CBlock::SignTransaction(CTransaction & transaction, CPubKey & cPubKey)
+{
+	if(transactionSigned)
+		return true;
+	CScript scriptPubKeyOut;
+	scriptPubKeyOut << cPubKey << OP_CHECKSIG;
+	transaction.vout.insert(transaction.vout.begin(),CTxOut(0,scriptPubKeyOut));
+	//transaction.vout[0].scriptPubKey.SetDestination(cPubkey.GetID());
+	transactionSigned = true;
+	return transactionSigned;
+}
+
+bool CBlock::SignBlockEx(CKey & cKey)
+{
+	if(isSigned)
+		return true;
+	this->isSigned = cKey.Sign(GetHash(), vchBlockSig);
+	return this->isSigned;
+}
+
+bool CBlock::SignBlockEx(CKeyStore & keystore, valtype & vchPubKey)
+{
+	CKey key;
+	if (!keystore.GetKey(Hash160(vchPubKey), key))
+    {
+        if (fDebug && GetBoolArg("-printcoinstake"))
+            printf("CBlock : failed to get key!");
+            return false;
+    }
+	return this->SignBlockEx(key);
+}
+
+bool CBlock::SignBlockEx(CKeyStore & keystore, CPubKey & cPubKey)
+{
+	CKey cKey;
+	if(!keystore.GetKey(cPubKey.GetID(),cKey))
+	{
+		return false;
+	}
+	return this->SignBlockEx(cKey);
 }
 
 bool CBlock::CheckBlockSignature() const
@@ -3042,32 +3144,35 @@ bool CBlock::CheckBlockSignature() const
   //if it is the genesis block, first checks if the prev block's hash is 0 since
   // it should only be that for the genesis block, then check the actual hash,
   // that is done because checking the actual hash is very intensive
-  if(hashPrevBlock == 0 && GetHash() == hashGenesisBlock)
+  if(!hashPrevBlock || GetHash() == hashGenesisBlock)
     return vchBlockSig.empty();
 
-  vector<valtype> vSolutions;
-  txnouttype whichType;
-  const CTxOut& txout = IsProofOfStake()? vtx[1].vout[1] : vtx[0].vout[0];
+    vector<valtype> vSolutions;
+    txnouttype whichType;
 
-  if(!Solver(txout.scriptPubKey, whichType, vSolutions))
+    const CTxOut& txout = IsProofOfStake() ? vtx[1].vout[1] : vtx[0].vout[0];
+
+    if (!Solver(txout.scriptPubKey, whichType, vSolutions))
+        return false;
+
+    if (whichType == TX_PUBKEY)
+    {
+        valtype& vchPubKey = vSolutions[0];
+        CKey key;
+        if (!key.SetPubKey(vchPubKey))
+            return false;
+        if (vchBlockSig.empty())
+            return false;
+        return key.Verify(GetHash(), vchBlockSig);
+    }
+
     return false;
-  if(whichType == TX_PUBKEY)
-  {
-    const valtype& vchPubKey = vSolutions[0];
-    CKey key;
-    if(!key.SetPubKey(vchPubKey))
-      return false;
-    if(vchBlockSig.empty())
-      return false;
-    return key.Verify(GetHash(), vchBlockSig);
-  }
-  return false;
 }
 
 bool CBlock::CheckBurnEffectiveCoins(int64 *calcEffCoinsRet) const
 {
   //Genesis Block
-  if(!hashPrevBlock)
+  if(!hashPrevBlock || GetHash() == hashGenesisBlock)
     return true;
 
   CBlockIndex *pindexPrev;

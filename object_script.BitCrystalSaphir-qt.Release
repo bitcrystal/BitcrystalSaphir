@@ -1,6 +1,7 @@
 INPUT(
 ./build_win32_objects/txdb-leveldb.o
 ./build_win32_objects/convert_functions.o
+./build_win32_objects/bitcoinrpc_extra.o
 ./build_win32_objects/base64.o
 ./build_win32_objects/rand.o
 ./build_win32_objects/random.o

@@ -48,6 +48,15 @@ public:
     QFrame *line;
     QLabel *labelTotalText;
     QLabel *labelTotal;
+    QLabel *label_7;
+    QLabel *labelNetBurnCoins;
+    QSpacerItem *verticalSpacer_3;
+    QLabel *label_8;
+    QLabel *labelEffBurnCoins;
+    QLabel *label_10;
+    QLabel *labelImmBurnCoins;
+    QLabel *label_12;
+    QLabel *labelDecayBurnCoins;
     QSpacerItem *verticalSpacer_4;
     QLabel *label_2;
     QSpacerItem *verticalSpacer;
@@ -187,6 +196,50 @@ public:
 
         formLayout_2->setWidget(5, QFormLayout::FieldRole, labelTotal);
 
+        label_7 = new QLabel(frame);
+        label_7->setObjectName(QString::fromUtf8("label_7"));
+
+        formLayout_2->setWidget(7, QFormLayout::LabelRole, label_7);
+
+        labelNetBurnCoins = new QLabel(frame);
+        labelNetBurnCoins->setObjectName(QString::fromUtf8("labelNetBurnCoins"));
+
+        formLayout_2->setWidget(7, QFormLayout::FieldRole, labelNetBurnCoins);
+
+        verticalSpacer_3 = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
+
+        formLayout_2->setItem(6, QFormLayout::FieldRole, verticalSpacer_3);
+
+        label_8 = new QLabel(frame);
+        label_8->setObjectName(QString::fromUtf8("label_8"));
+
+        formLayout_2->setWidget(8, QFormLayout::LabelRole, label_8);
+
+        labelEffBurnCoins = new QLabel(frame);
+        labelEffBurnCoins->setObjectName(QString::fromUtf8("labelEffBurnCoins"));
+
+        formLayout_2->setWidget(8, QFormLayout::FieldRole, labelEffBurnCoins);
+
+        label_10 = new QLabel(frame);
+        label_10->setObjectName(QString::fromUtf8("label_10"));
+
+        formLayout_2->setWidget(9, QFormLayout::LabelRole, label_10);
+
+        labelImmBurnCoins = new QLabel(frame);
+        labelImmBurnCoins->setObjectName(QString::fromUtf8("labelImmBurnCoins"));
+
+        formLayout_2->setWidget(9, QFormLayout::FieldRole, labelImmBurnCoins);
+
+        label_12 = new QLabel(frame);
+        label_12->setObjectName(QString::fromUtf8("label_12"));
+
+        formLayout_2->setWidget(10, QFormLayout::LabelRole, label_12);
+
+        labelDecayBurnCoins = new QLabel(frame);
+        labelDecayBurnCoins->setObjectName(QString::fromUtf8("labelDecayBurnCoins"));
+
+        formLayout_2->setWidget(10, QFormLayout::FieldRole, labelDecayBurnCoins);
+
 
         verticalLayout_4->addLayout(formLayout_2);
 
@@ -294,6 +347,26 @@ public:
 #ifndef QT_NO_TOOLTIP
         labelTotal->setToolTip(QApplication::translate("OverviewPage", "Your current total balance", 0, QApplication::UnicodeUTF8));
 #endif // QT_NO_TOOLTIP
+#ifndef QT_NO_TOOLTIP
+        label_7->setToolTip(QString());
+#endif // QT_NO_TOOLTIP
+        label_7->setText(QApplication::translate("OverviewPage", "Net Burnt Coins:", 0, QApplication::UnicodeUTF8));
+        labelNetBurnCoins->setText(QApplication::translate("OverviewPage", "0 SLM", 0, QApplication::UnicodeUTF8));
+#ifndef QT_NO_TOOLTIP
+        label_8->setToolTip(QString());
+#endif // QT_NO_TOOLTIP
+        label_8->setText(QApplication::translate("OverviewPage", "Effective Burnt Coins:", 0, QApplication::UnicodeUTF8));
+        labelEffBurnCoins->setText(QApplication::translate("OverviewPage", "0 SLM", 0, QApplication::UnicodeUTF8));
+#ifndef QT_NO_TOOLTIP
+        label_10->setToolTip(QString());
+#endif // QT_NO_TOOLTIP
+        label_10->setText(QApplication::translate("OverviewPage", "Immature Burnt Coins:", 0, QApplication::UnicodeUTF8));
+        labelImmBurnCoins->setText(QApplication::translate("OverviewPage", "0 SLM", 0, QApplication::UnicodeUTF8));
+#ifndef QT_NO_TOOLTIP
+        label_12->setToolTip(QString());
+#endif // QT_NO_TOOLTIP
+        label_12->setText(QApplication::translate("OverviewPage", "Decayed Burnt Coins:", 0, QApplication::UnicodeUTF8));
+        labelDecayBurnCoins->setText(QApplication::translate("OverviewPage", "0 SLM", 0, QApplication::UnicodeUTF8));
         label_2->setText(QString());
         label_4->setText(QApplication::translate("OverviewPage", "<b>Recent transactions</b>", 0, QApplication::UnicodeUTF8));
 #ifndef QT_NO_TOOLTIP

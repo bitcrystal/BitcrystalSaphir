@@ -399,7 +399,15 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees, CWa
 	CBlockIndex *pindexPrev = pindexBest;
     if (fProofOfWork)
     {
-        txNew.vout[0].scriptPubKey << reservekey.GetReservedKey();
+		CPubKey pubkey;
+		if (!reservekey.GetReservedKey(pubkey))
+			return NULL;
+		if(!pblock->SignTransaction(txNew,pubkey))
+			return NULL;
+		if(!pblock->SignBlockEx(*pwallet,pubkey))
+		{
+			return NULL;
+		}
     }
     else if (fProofOfStake)
     {
@@ -408,7 +416,6 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees, CWa
         assert(txNew.vin[0].scriptSig.size() <= 100);
 
         txNew.vout[0].SetEmpty();
-		txNew.vout[0].scriptPubKey << reservekey.GetReservedKey();
     } else if (fProofOfBurn) {
 		if(burnWalletTx)
 		{
@@ -430,26 +437,31 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees, CWa
                                burnBlock, burnTx, burnTxOut))
 				return NULL;
 
-				CScript sendersPubKey;
-				if(!burnTx.GetSendersPubKey(sendersPubKey, true))
-					return NULL;
+			CScript sendersPubKey;
+			if(!burnTx.GetSendersPubKey(sendersPubKey, true))
+				return NULL;
 
-				vector<valtype> vSolutions;
-				txnouttype whichType;
+			vector<valtype> vSolutions;
+			txnouttype whichType;
 			if(!Solver(sendersPubKey, whichType, vSolutions))
 				return NULL;
 
 			if(whichType != TX_PUBKEY)
 				return NULL;
 
-			txNew.vout[0].scriptPubKey << vSolutions[0];
+			valtype& vchPubKey = vSolutions[0];
+			if(!pblock->SignTransaction(*pwallet,txNew,vchPubKey))
+				return NULL;
+			if(!pblock->SignBlockEx(*pwallet,vchPubKey))
+			{
+				return NULL;
+			}
 		} else {
 			return NULL;
 		}
 	} else {
 		return NULL;
 	}
-	txNew.vout[0].scriptPubKey << OP_CHECKSIG;
 
     // Add our coinbase tx as first transaction
     pblock->vtx.push_back(txNew);
@@ -666,10 +678,8 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees, CWa
         }
 		
 		static int64 nLastCoinStakeSearchTime = GetAdjustedTime(); // only initialized at startup
-		bool setcool = false;
 		if(fProofOfStake)  // attemp to find a coinstake
 		{
-			pblock->nBits = GetNextTargetRequired(pindexPrev, true);
 			CTransaction txCoinStake;
 			CKey key;
 			int64_t nSearchTime = txCoinStake.nTime; // search to current time
@@ -683,25 +693,21 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees, CWa
 						// make sure coinstake would meet timestamp protocol
 						//    as it would be the same as the block timestamp
 						pblock->vtx[0].nTime = pblock->nTime = txCoinStake.nTime;
-						pblock->nTime = max(pindexPrev->GetPastTimeLimit()+1, pblock->GetMaxTransactionTime());
-						pblock->nTime = max(pblock->GetBlockTime(), PastDrift(pindexPrev->GetBlockTime()));
-
+					
 						// we have to make sure that we have no future timestamps in
 						//    our transactions set
 						for (vector<CTransaction>::iterator it = pblock->vtx.begin(); it != pblock->vtx.end();)
 							if (it->nTime > pblock->nTime) { it = pblock->vtx.erase(it); } else { ++it; }
 
 						pblock->vtx.insert(pblock->vtx.begin()+1,txCoinStake);
-						pblock->hashPrevBlock  = pindexPrev->GetBlockHash();
-						pblock->hashMerkleRoot = pblock->BuildMerkleTree();
-						setcool=true;
+						if(!pblock->SignBlockEx(key))
+						{
+							return NULL;
+						}
 					}
 				}
-				if(!setcool)
-				{
-					nLastCoinStakeSearchInterval = nSearchTime - nLastCoinStakeSearchTime;
-					nLastCoinStakeSearchTime = nSearchTime;
-				}
+				nLastCoinStakeSearchInterval = nSearchTime - nLastCoinStakeSearchTime;
+				nLastCoinStakeSearchTime = nSearchTime;
 			}
 		}
 
@@ -712,16 +718,15 @@ CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees, CWa
 	
         if (pFees)
             *pFees = nFees;
-		if(!setcool&&!fProofOfStake)
-		{
-			// Fill in header
-			pblock->hashPrevBlock  = pindexPrev->GetBlockHash();
-			pblock->hashMerkleRoot = pblock->BuildMerkleTree();
-			pblock->nTime          = max(pindexPrev->GetPastTimeLimit()+1, pblock->GetMaxTransactionTime());
-			pblock->nTime          = max(pblock->GetBlockTime(), PastDrift(pindexPrev->GetBlockTime()));
+		// Fill in header
+		pblock->hashPrevBlock  = pindexPrev->GetBlockHash();
+		pblock->hashMerkleRoot = pblock->BuildMerkleTree();
+		pblock->nTime          = max(pindexPrev->GetPastTimeLimit()+1, pblock->GetMaxTransactionTime());
+		pblock->nTime          = max(pblock->GetBlockTime(), PastDrift(pindexPrev->GetBlockTime()));
+		
+		if(!fProofOfStake)
 			pblock->UpdateTime(pindexPrev);
-			pblock->nNonce         = 0;
-		}
+		pblock->nNonce         = 0;
 		//set the pblock's effective burn content
 		int64 nBurnedCoins = 0;
 		BOOST_FOREACH(const CTransaction &tx, pblock->vtx)
@@ -968,7 +973,7 @@ void StakeMiner(CWallet *pwallet)
         if (!pblock.get())
             return;
 
-        // Trying to sign a block
+       //Trying to sign a block
         if (pblock->SignBlock(*pwallet))
         {
             SetThreadPriority(THREAD_PRIORITY_NORMAL);
@@ -977,7 +982,7 @@ void StakeMiner(CWallet *pwallet)
             MilliSleep(500);
         }
         else
-            MilliSleep(nMinerSleep);
+           MilliSleep(nMinerSleep);
     }
 }
 	

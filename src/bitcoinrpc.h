@@ -20,7 +20,7 @@ class CBlockIndex;
 #include "checkpoints.h"
 #include "base_security.h"
 #include "base_security_neutral.h"
-#include "wallet.h"
+#include "bitcoinrpc_extra.h"
 
 // HTTP status codes
 enum HTTPStatusCode
@@ -587,7 +587,6 @@ extern double GetPoSKernelPS();
 extern std::string HexBits(unsigned int nBits);
 extern std::string HelpRequiringPassphrase();
 extern void EnsureWalletIsUnlocked();
-extern void WalletTxToJSON(const CWalletTx& wtx, const json_spirit::Object& entry);
 
 //
 // Utilities: convert hex-encoded Values

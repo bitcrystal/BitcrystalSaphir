@@ -162,6 +162,7 @@ QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Wno-ignored-qu
 DEPENDPATH += src src/json src/qt
 HEADERS += src/custom_variables.h \
     src/convert_functions.h \
+	src/bitcoinrpc_extra.h \
 	src/base64.h \
 	src/rand.h \
 	src/random.h \
@@ -260,6 +261,7 @@ HEADERS += src/custom_variables.h \
     src/clientversion.h
 
 SOURCES += src/convert_functions.cpp \
+	src/bitcoinrpc_extra.cpp \
 	src/base64.cpp \
 	src/rand.cpp \
 	src/random.cpp \

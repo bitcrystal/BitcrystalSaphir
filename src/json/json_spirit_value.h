@@ -530,5 +530,4 @@ namespace json_spirit
         return internal_::get_value( *this, internal_::Type_to_type< T >() );
     }
 }
-
 #endif

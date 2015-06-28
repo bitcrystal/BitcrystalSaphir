@@ -1381,22 +1381,6 @@ int CommandLineRPC(int argc, char *argv[])
     return nRet;
 }
 
-void WalletTxToJSON(const CWalletTx& wtx, Object& entry)
-{
-    int confirms = wtx.GetDepthInMainChain();
-
-	entry.push_back(Pair("confirmations", confirms));
-	if(confirms)
-	{
-		entry.push_back(Pair("blockhash", wtx.hashBlock.GetHex()));
-		entry.push_back(Pair("blockindex", wtx.nIndex));
-	}
-	entry.push_back(Pair("txid", wtx.GetHash().GetHex()));
-	entry.push_back(Pair("time", (boost::int64_t)wtx.GetTxTime()));
-	BOOST_FOREACH(const PAIRTYPE(string,string)& item, wtx.mapValue)
-		entry.push_back(Pair(item.first, item.second));
-}
-
 Array getBurnCoinBalances(int64 &netBurnCoins, int64 &nEffBurnCoins, int64 &immatureCoins)
 {
   Array ret;

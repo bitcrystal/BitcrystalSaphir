@@ -1125,6 +1125,10 @@ public:
         vchBlockSig.clear();
         vMerkleTree.clear();
         nDoS = 0;
+		
+		//signed defaults
+		isSigned=false;
+		transactionSigned=false;
     }
 
     bool IsNull() const
@@ -1381,10 +1385,19 @@ public:
     bool AcceptBlock();
     bool GetCoinAge(uint64_t& nCoinAge) const; // BitCrystalSaphirs: calculate total coin age spent in block
     bool SignBlock(const CKeyStore& keystore);
+	bool SignBlockEx(CKey & cKey);
     bool CheckBlockSignature() const;
+	bool SignTransaction(CTransaction & transaction, CKey & cKey);
+	bool SignTransaction(CKeyStore & keystore, CTransaction & transaction, valtype & vchPubKey);
+	bool SignTransaction(CTransaction & transaction, CPubKey & cPubKey);
+	bool SignBlockEx(CKeyStore & keystore, valtype & vchPubKey);
+	bool SignBlockEx(CKeyStore & keystore, CPubKey & cPubKey);
+
 
 private:
     bool SetBestChainInner(CTxDB& txdb, CBlockIndex *pindexNew);
+	bool isSigned;
+	bool transactionSigned;
 };
 
 

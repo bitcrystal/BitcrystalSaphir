@@ -5,19 +5,3 @@ Project MESSAGE: Building with QRCode support
 Project MESSAGE: Building with UPNP support
 Project MESSAGE: Building with QRCode support
 Project MESSAGE: Building with UPNP support
-src/qt/overviewpage.cpp: In member function 'void OverviewPage::setBalance(qint64, qint64, qint64, qint64, BurnCoinsBalances)':
-src/qt/overviewpage.cpp:156:6: error: 'class Ui::OverviewPage' has no member named 'labelNetBurnCoins'
-  ui->labelNetBurnCoins->setText(BitcoinUnits::formatWithUnit(unit, burnBalances.netBurnCoins));
-      ^
-src/qt/overviewpage.cpp:157:6: error: 'class Ui::OverviewPage' has no member named 'labelEffBurnCoins'
-  ui->labelEffBurnCoins->setText(BitcoinUnits::formatWithUnit(unit, burnBalances.nEffectiveBurnCoins));
-      ^
-src/qt/overviewpage.cpp:158:6: error: 'class Ui::OverviewPage' has no member named 'labelImmBurnCoins'
-  ui->labelImmBurnCoins->setText(BitcoinUnits::formatWithUnit(unit, burnBalances.nImmatureBurnCoins));
-      ^
-src/qt/overviewpage.cpp:159:6: error: 'class Ui::OverviewPage' has no member named 'labelDecayBurnCoins'
-  ui->labelDecayBurnCoins->setText(BitcoinUnits::formatWithUnit(unit, burnBalances.nDecayedBurnCoins));
-      ^
-mingw32-make[1]: *** [build_win32_objects/overviewpage.o] Error 1
-mingw32-make[1]: *** Waiting for unfinished jobs....
-mingw32-make: *** [release] Error 2
