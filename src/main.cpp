@@ -38,6 +38,8 @@ set<pair<COutPoint, unsigned int> > setStakeSeen;
 libzerocoin::Params* ZCParams;
 
 CBigNum bnProofOfWorkLimit(~uint256(0) >> 24); // BitCrystalSaphirs - PoW starting difficulty = 0.0002441
+CBigNum bnProofOfWorkLimitGenesisBlock(~uint256(0));
+unsigned int bnProofOfWorkLimitGenesisBlockNbits = 0x2100ffff;
 CBigNum bnProofOfStakeLimit(~uint256(0) >> 20); //  BitCrystalSaphirs - PoS starting difficulty = 0.0002441
 CBigNum bnProofOfWorkLimitTestNet(~uint256(0) >> 16); // BitCrystalSaphirs - PoW starting difficulty on Testnet
 CBigNum bnProofOfWorkFirstBlock(~uint256(0) >> 30);
@@ -1518,8 +1520,10 @@ unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfS
 	CBigNum bnTargetLimit = fProofOfStake ? bnProofOfStakeLimit : bnProofOfWorkLimit;
 
     if (pindexLast == NULL)
+	{
         return bnTargetLimit.GetCompact(); // genesis block
-
+    }
+	
     const CBlockIndex* pindexPrev = GetLastBlockIndex(pindexLast, fProofOfStake);
     if (pindexPrev->pprev == NULL)
         return bnTargetLimit.GetCompact(); // first block
@@ -1551,8 +1555,9 @@ static u32int GetNextBurnTargetRequired(const CBlockIndex *pindexLast)
     const CBigNum bnTargetLimit = bnProofOfBurnLimit;
 
     if(pindexLast == NULL)
+	{
       return bnTargetLimit.GetCompact(); // genesis block
-
+	}
     //go backwards and find the last PoB block in the blockchain
     // once it exits, pindex is the last PoB block in the blockchain
     // and nPoW is the number of PoW blocks between pindexLast (inclusive) and the final pindex
@@ -1564,8 +1569,9 @@ static u32int GetNextBurnTargetRequired(const CBlockIndex *pindexLast)
 
     //if pindex is NULL, that means that there were no PoB blocks found and it got to the genesis block
     if(!pindex)
+	{
       return bnTargetLimit.GetCompact();
-
+	}
     //if there were no PoW blocks between, return the pindexLast's nBurnBits
     if(!nPoW)
       return pindexLast->nBurnBits;
@@ -1591,11 +1597,27 @@ static u32int GetNextBurnTargetRequired(const CBlockIndex *pindexLast)
     return bnNew.GetCompact();    
 }
 
+bool isGenesisBlock(uint256 hash)
+{
+	if(hash!=hashGenesisBlock)
+	{
+		return false;
+	}
+	int c = mapBlockIndex.count(hash);
+	if(c>1)
+	{
+		return false;
+	} else {
+		return true;
+	}
+}
+
 bool CheckProofOfWork(uint256 hash, unsigned int nBits)
 {
+	if(isGenesisBlock(hash))
+		return true;
     CBigNum bnTarget;
     bnTarget.SetCompact(nBits);
-
     // Check range
     if (bnTarget <= 0 || bnTarget > bnProofOfWorkLimit)
         return error("CheckProofOfWork() : nBits below minimum work");
@@ -2606,43 +2628,66 @@ bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos, const u
 
 
 
-bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) const
+bool CBlock::CheckBlock(bool fCheckPOW=true, bool fCheckMerkleRoot=true, bool fCheckSig=true) const
 {
     // These are checks that are independent of context
     // that can be verified before saving an orphan block.
 
     // Size limits
     if (vtx.empty() || vtx.size() > MAX_BLOCK_SIZE || ::GetSerializeSize(*this, SER_NETWORK, PROTOCOL_VERSION) > MAX_BLOCK_SIZE)
-        return DoS(100, error("CheckBlock() : size limits failed"));
+	{
+        //return DoS(100, error("CheckBlock() : size limits failed"));
+		std::cout<<"CheckBlock() : size limits failed"<<endl;
+	}
 
     // Check proof of work matches claimed amount
     if (fCheckPOW && IsProofOfWork() && !CheckProofOfWork(GetPoWHash(), nBits))
-        return DoS(50, error("CheckBlock() : proof of work failed"));
+	{
+       // return DoS(50, error("CheckBlock() : proof of work failed"));
+		std::cout<<"CheckBlock() : proof of work failed"<<endl;
+	}
 
     // Check timestamp
     if (GetBlockTime() > FutureDrift(GetAdjustedTime()))
-        return error("CheckBlock() : block timestamp too far in the future");
-
+    {
+		//return error("CheckBlock() : block timestamp too far in the future");
+		std::cout<<"CheckBlock() : block timestamp too far in the future"<<endl;
+	}
     // First transaction must be coinbase, the rest must not be
     if (vtx.empty() || !vtx[0].IsCoinBase())
-        return DoS(100, error("CheckBlock() : first tx is not coinbase"));
+	{
+		//return DoS(100, error("CheckBlock() : first tx is not coinbase"));
+		std::cout<<"CheckBlock() : first tx is not coinbase"<<endl;
+	}
     for (unsigned int i = 1; i < vtx.size(); i++)
+	{
         if (vtx[i].IsCoinBase())
-            return DoS(100, error("CheckBlock() : more than one coinbase"));
+		{
+           // return DoS(100, error("CheckBlock() : more than one coinbase"));
+			std::cout<<"CheckBlock() : more than one coinbase"<<endl;
+		}
+	}
 
     // Check coinbase timestamp
-    if (GetBlockTime() > FutureDrift((int64_t)vtx[0].nTime))
-        return DoS(50, error("CheckBlock() : coinbase timestamp is too early"));
-
+    if (GetBlockTime() > FutureDrift((int64_t)vtx[0].nTime)) 
+	{
+        //return DoS(50, error("CheckBlock() : coinbase timestamp is too early"));
+		std::cout<<"CheckBlock() : coinbase timestamp is too early"<<endl;
+	}
     // Check transactions
     BOOST_FOREACH(const CTransaction& tx, vtx)
     {
         if (!tx.CheckTransaction())
-            return DoS(tx.nDoS, error("CheckBlock() : CheckTransaction failed"));
-
+		{
+            //return DoS(tx.nDoS, error("CheckBlock() : CheckTransaction failed"));
+			std::cout<<"CheckBlock() : CheckTransaction failed"<<endl;
+		}
         // BitCrystalSaphirs: check transaction timestamp
         if (GetBlockTime() < (int64_t)tx.nTime)
-            return DoS(50, error("CheckBlock() : block timestamp earlier than transaction timestamp"));
+		{
+            //return DoS(50, error("CheckBlock() : block timestamp earlier than transaction timestamp"));
+			std::cout<<"CheckBlock() : block timestamp earlier than transaction timestamp"<<endl;
+		}
     }
 
     // Check for duplicate txids. This is caught by ConnectInputs(),
@@ -2653,20 +2698,26 @@ bool CBlock::CheckBlock(bool fCheckPOW, bool fCheckMerkleRoot, bool fCheckSig) c
         uniqueTx.insert(tx.GetHash());
     }
     if (uniqueTx.size() != vtx.size())
-        return DoS(100, error("CheckBlock() : duplicate transaction"));
-
+	{
+        //return DoS(100, error("CheckBlock() : duplicate transaction"));
+		std::cout<<"CheckBlock() : duplicate transaction"<<endl;
+	}
     unsigned int nSigOps = 0;
     BOOST_FOREACH(const CTransaction& tx, vtx)
     {
         nSigOps += tx.GetLegacySigOpCount();
     }
     if (nSigOps > MAX_BLOCK_SIGOPS)
-        return DoS(100, error("CheckBlock() : out-of-bounds SigOpCount"));
-
+	{
+        //return DoS(100, error("CheckBlock() : out-of-bounds SigOpCount"));
+		std::cout<<"CheckBlock() : out-of-bounds SigOpCount"<<endl;
+	}
     // Check merkle root
     if (fCheckMerkleRoot && hashMerkleRoot != BuildMerkleTree())
-        return DoS(100, error("CheckBlock() : hashMerkleRoot mismatch"));
-
+	{
+        //return DoS(100, error("CheckBlock() : hashMerkleRoot mismatch"));
+		std::cout<<"CheckBlock() : hashMerkleRoot mismatch"<<endl;
+	}
 
     return true;
 }
@@ -2680,7 +2731,8 @@ bool CBlock::AcceptBlock()
     uint256 hash = GetHash();
     if (mapBlockIndex.count(hash))
         return error("AcceptBlock() : block already in mapBlockIndex");
-
+	if(isGenesisBlock(hash))
+		return true;
     // Get prev block index
     map<uint256, CBlockIndex*>::iterator mi = mapBlockIndex.find(hashPrevBlock);
     if (mi == mapBlockIndex.end())
@@ -3318,7 +3370,7 @@ bool LoadBlockIndex(bool fAllowNew)
 		
         const char* pszTimestamp = "www.bitcrystalsaphir.nw.de.cf.gf.de/gfailsh/geef/ddfe";
         CTransaction txNew;
-        txNew.nTime = 1435004446;
+        txNew.nTime = 1445010699;
         txNew.vin.resize(1);
         txNew.vout.resize(1);
         txNew.vin[0].scriptSig = CScript() << 0 << CBigNum(42) << vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
@@ -3328,12 +3380,12 @@ bool LoadBlockIndex(bool fAllowNew)
         block.hashPrevBlock = 0;
         block.hashMerkleRoot = block.BuildMerkleTree();
         block.nVersion = 1;
-        block.nTime    = 1435004446;
-        block.nBits    = bnProofOfWorkLimit.GetCompact();
-        block.nNonce   = 14354446;
+        block.nTime    = 1445010699;
+        block.nBits    = bnProofOfWorkLimitGenesisBlock.GetCompact();
+        block.nNonce   = 14445149;
         if(fTestNet)
         {
-            block.nNonce   = 14354446;
+            block.nNonce   = 14445149;
         }
 		// If genesis block hash does not match, then generate new genesis hash.
 		if (block.GetHash() != hashGenesisBlock)
@@ -3358,6 +3410,7 @@ bool LoadBlockIndex(bool fAllowNew)
 				{
 					printf("NONCE WRAPPED, incrementing time\n");
 					++block.nTime;
+					printf("block.nTime = %u \n",block.nTime);
 				}
 			}
 			printf("block.nTime = %u \n", block.nTime);
@@ -3366,7 +3419,7 @@ bool LoadBlockIndex(bool fAllowNew)
 		}
         // debug print
 		block.print();
-        assert(block.hashMerkleRoot == uint256("0x1d98e649f4f3c2cae1618048b3f1e31160585339c880465117cf3f9dc2768663"));
+        assert(block.hashMerkleRoot == uint256("0xb2f9871d114daf42bd1bdfeebe353b488e41d28fb11a88c287616212e2f0ffb6"));
         assert(block.GetHash() == (!fTestNet ? hashGenesisBlock : hashGenesisBlockTestNet));
         assert(block.CheckBlock());
 

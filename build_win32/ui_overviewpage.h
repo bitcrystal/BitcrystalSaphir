@@ -57,9 +57,6 @@ public:
     QLabel *labelImmBurnCoins;
     QLabel *label_12;
     QLabel *labelDecayBurnCoins;
-    QSpacerItem *verticalSpacer_4;
-    QLabel *label_2;
-    QSpacerItem *verticalSpacer;
     QVBoxLayout *verticalLayout_3;
     QFrame *frame_2;
     QVBoxLayout *verticalLayout;
@@ -68,7 +65,6 @@ public:
     QLabel *labelTransactionsStatus;
     QSpacerItem *horizontalSpacer;
     QListView *listTransactions;
-    QSpacerItem *verticalSpacer_2;
 
     void setupUi(QWidget *OverviewPage)
     {
@@ -246,21 +242,6 @@ public:
 
         verticalLayout_2->addWidget(frame);
 
-        verticalSpacer_4 = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
-
-        verticalLayout_2->addItem(verticalSpacer_4);
-
-        label_2 = new QLabel(OverviewPage);
-        label_2->setObjectName(QString::fromUtf8("label_2"));
-        label_2->setPixmap(QPixmap(QString::fromUtf8(":/images/Wallet_Logo")));
-        label_2->setAlignment(Qt::AlignCenter);
-
-        verticalLayout_2->addWidget(label_2);
-
-        verticalSpacer = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
-
-        verticalLayout_2->addItem(verticalSpacer);
-
 
         horizontalLayout->addLayout(verticalLayout_2);
 
@@ -306,10 +287,6 @@ public:
 
 
         verticalLayout_3->addWidget(frame_2);
-
-        verticalSpacer_2 = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
-
-        verticalLayout_3->addItem(verticalSpacer_2);
 
 
         horizontalLayout->addLayout(verticalLayout_3);
@@ -367,7 +344,6 @@ public:
 #endif // QT_NO_TOOLTIP
         label_12->setText(QApplication::translate("OverviewPage", "Decayed Burnt Coins:", 0, QApplication::UnicodeUTF8));
         labelDecayBurnCoins->setText(QApplication::translate("OverviewPage", "0 SLM", 0, QApplication::UnicodeUTF8));
-        label_2->setText(QString());
         label_4->setText(QApplication::translate("OverviewPage", "<b>Recent transactions</b>", 0, QApplication::UnicodeUTF8));
 #ifndef QT_NO_TOOLTIP
         labelTransactionsStatus->setToolTip(QApplication::translate("OverviewPage", "The displayed information may be out of date. Your wallet automatically synchronizes with the BitCrystalSaphir network after a connection is established, but this process has not completed yet.", 0, QApplication::UnicodeUTF8));

@@ -4,7 +4,7 @@ set DEPS_EXIST=0
 set MINGW32_EXIST=0
 set QT_EXIST=0
 set MINGWCOIN_EXIST=0
-set CLEAN="true"
+set CLEAN="false"
 
 set /A DIR_EXISTS=0
 if exist C:\deps (

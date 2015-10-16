@@ -49,7 +49,7 @@ static const int fHaveUPnP = true;
 #else
 static const int fHaveUPnP = false;
 #endif
-static const uint256 hashGenesisBlock("0xcb10a1f9c584c12e2f3382a9a508111e29f29007aaef957ab0fd0339718cb3ca");
+static const uint256 hashGenesisBlock("0x19c706b276af4a4efcbdba123ea140cc5e841b63bc91a37d366f4e6d200683c7");
 static const uint256 hashGenesisBlockTestNet("0xcb10a1f9c584c12e2f3382a9a508111e29f29007aaef957ab0fd0339718cb3ca");
 
 inline int64_t PastDrift(int64_t nTime)   { return nTime - 10 * 60; } // up to 10 minutes from the past
@@ -113,6 +113,7 @@ bool SendMessages(CNode* pto, bool fSendTrickle);
 bool LoadExternalBlockFile(FILE* fileIn);
 
 bool CheckProofOfWork(uint256 hash, unsigned int nBits);
+bool isGenesisBlock(uint256 hash);
 unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfStake);
 int64_t GetProofOfWorkReward(int64_t nFees);
 int64_t GetProofOfStakeReward(int64_t nCoinAge, int64_t nFees);

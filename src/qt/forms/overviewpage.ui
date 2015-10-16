@@ -233,132 +233,93 @@
            </widget>
           </item>
           <item row="7" column="0">
-          <widget class="QLabel" name="label_7">
-           <property name="toolTip">
-            <string/>
-           </property>
-           <property name="text">
-            <string>Net Burnt Coins:</string>
-           </property>
-          </widget>
-         </item>
-         <item row="7" column="1">
-          <widget class="QLabel" name="labelNetBurnCoins">
-           <property name="text">
-            <string>0 SLM</string>
-           </property>
-          </widget>
-         </item>
-         <item row="6" column="1">
-          <spacer name="verticalSpacer_3">
-           <property name="orientation">
-            <enum>Qt::Vertical</enum>
-           </property>
-           <property name="sizeType">
-            <enum>QSizePolicy::Expanding</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>20</width>
-             <height>40</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-         <item row="8" column="0">
-          <widget class="QLabel" name="label_8">
-           <property name="toolTip">
-            <string/>
-           </property>
-           <property name="text">
-            <string>Effective Burnt Coins:</string>
-           </property>
-          </widget>
-         </item>
-         <item row="8" column="1">
-          <widget class="QLabel" name="labelEffBurnCoins">
-           <property name="text">
-            <string>0 SLM</string>
-           </property>
-          </widget>
-         </item>
-         <item row="9" column="0">
-          <widget class="QLabel" name="label_10">
-           <property name="toolTip">
-            <string/>
-           </property>
-           <property name="text">
-            <string>Immature Burnt Coins:</string>
-           </property>
-          </widget>
-         </item>
-         <item row="9" column="1">
-          <widget class="QLabel" name="labelImmBurnCoins">
-           <property name="text">
-            <string>0 SLM</string>
-           </property>
-          </widget>
-         </item>
-         <item row="10" column="0">
-          <widget class="QLabel" name="label_12">
-           <property name="toolTip">
-            <string/>
-           </property>
-           <property name="text">
-            <string>Decayed Burnt Coins:</string>
-           </property>
-          </widget>
-         </item>
-         <item row="10" column="1">
-          <widget class="QLabel" name="labelDecayBurnCoins">
-           <property name="text">
-            <string>0 SLM</string>
-           </property>
-          </widget>
-         </item>
+           <widget class="QLabel" name="label_7">
+            <property name="toolTip">
+             <string/>
+            </property>
+            <property name="text">
+             <string>Net Burnt Coins:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="1">
+           <widget class="QLabel" name="labelNetBurnCoins">
+            <property name="text">
+             <string>0 SLM</string>
+            </property>
+           </widget>
+          </item>
+          <item row="6" column="1">
+           <spacer name="verticalSpacer_3">
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+            <property name="sizeType">
+             <enum>QSizePolicy::Expanding</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>40</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item row="8" column="0">
+           <widget class="QLabel" name="label_8">
+            <property name="toolTip">
+             <string/>
+            </property>
+            <property name="text">
+             <string>Effective Burnt Coins:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="8" column="1">
+           <widget class="QLabel" name="labelEffBurnCoins">
+            <property name="text">
+             <string>0 SLM</string>
+            </property>
+           </widget>
+          </item>
+          <item row="9" column="0">
+           <widget class="QLabel" name="label_10">
+            <property name="toolTip">
+             <string/>
+            </property>
+            <property name="text">
+             <string>Immature Burnt Coins:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="9" column="1">
+           <widget class="QLabel" name="labelImmBurnCoins">
+            <property name="text">
+             <string>0 SLM</string>
+            </property>
+           </widget>
+          </item>
+          <item row="10" column="0">
+           <widget class="QLabel" name="label_12">
+            <property name="toolTip">
+             <string/>
+            </property>
+            <property name="text">
+             <string>Decayed Burnt Coins:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="10" column="1">
+           <widget class="QLabel" name="labelDecayBurnCoins">
+            <property name="text">
+             <string>0 SLM</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </item>
        </layout>
       </widget>
-     </item>
-     <item>
-      <spacer name="verticalSpacer_4">
-       <property name="orientation">
-        <enum>Qt::Vertical</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>20</width>
-         <height>40</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item>
-      <widget class="QLabel" name="label_2">
-       <property name="text">
-        <string/>
-       </property>
-       <property name="pixmap">
-        <pixmap resource="../bitcoin.qrc">:/images/Wallet_Logo</pixmap>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignCenter</set>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <spacer name="verticalSpacer">
-       <property name="orientation">
-        <enum>Qt::Vertical</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>20</width>
-         <height>40</height>
-        </size>
-       </property>
-      </spacer>
      </item>
     </layout>
    </item>
@@ -434,19 +395,6 @@
         </item>
        </layout>
       </widget>
-     </item>
-     <item>
-      <spacer name="verticalSpacer_2">
-       <property name="orientation">
-        <enum>Qt::Vertical</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>20</width>
-         <height>40</height>
-        </size>
-       </property>
-      </spacer>
      </item>
     </layout>
    </item>
